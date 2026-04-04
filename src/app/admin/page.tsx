@@ -77,6 +77,7 @@ export default function AdminPage() {
   const [seatStudents, setSeatStudents] = useState<Student[]>([]);
   const [hoveredSeat, setHoveredSeat] = useState<Student | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -392,10 +393,10 @@ export default function AdminPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
       <aside style={{
-        width: '260px',
+        width: sidebarCollapsed ? '72px' : '260px',
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-subtle)',
-        padding: '24px 16px',
+        padding: sidebarCollapsed ? '24px 8px' : '24px 16px',
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
@@ -403,12 +404,36 @@ export default function AdminPage() {
         left: 0,
         bottom: 0,
         zIndex: 50,
+        transition: 'width 0.2s ease, padding 0.2s ease',
+        overflow: 'hidden',
       }}>
-        <div style={{ marginBottom: '32px', padding: '0 8px' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
-            UniDay
-          </h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
+        <div style={{ marginBottom: '32px', padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
+          {!sidebarCollapsed && (
+            <div>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
+                UniDay
+              </h1>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              padding: '4px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '▶' : '◀'}
+          </button>
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -420,7 +445,8 @@ export default function AdminPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: sidebarCollapsed ? '12px 0' : '12px 16px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 borderRadius: '12px',
                 border: 'none',
                 background: activeTab === tab.id ? 'var(--accent-glow)' : 'transparent',
@@ -432,28 +458,37 @@ export default function AdminPage() {
                 textAlign: 'left',
                 fontFamily: 'Inter, sans-serif',
               }}
+              title={sidebarCollapsed ? tab.label : undefined}
             >
               <span style={{ fontSize: '1.1rem' }}>{tab.icon}</span>
-              {tab.label}
+              {!sidebarCollapsed && tab.label}
             </button>
           ))}
         </nav>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-           <button onClick={() => window.open('/mc', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
-             Go to MC Dashboard ↗
-           </button>
-           <button onClick={() => window.open('/volunteer', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
-             Go to Volunteer ↗
-           </button>
-           <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', marginTop: '8px' }}>
-             Sign Out
-           </button>
+          {!sidebarCollapsed ? (
+            <>
+              <button onClick={() => window.open('/mc', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+                Go to MC Dashboard ↗
+              </button>
+              <button onClick={() => window.open('/volunteer', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+                Go to Volunteer ↗
+              </button>
+              <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', marginTop: '8px' }}>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', padding: '8px 0' }} title="Sign Out">
+              🚪
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>
+      <main style={{ flex: 1, marginLeft: sidebarCollapsed ? '72px' : '260px', padding: '32px', transition: 'margin-left 0.2s ease' }}>
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && stats && (
           <div className="fade-in">
