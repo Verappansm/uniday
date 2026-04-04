@@ -17,7 +17,6 @@ interface ExcelRow {
   phone_number?: string;
   award_type?: string;
   award_details?: string;
-  seating?: string;
   rank?: string;
 }
 
@@ -91,8 +90,6 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   award_details: 'award_details',
   award_detail: 'award_details',
   award_name: 'award_details',
-  seating: 'seating',
-  seat: 'seating',
   rank: 'rank',
 };
 
@@ -125,13 +122,8 @@ export async function POST(request: NextRequest) {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rawData = XLSX.utils.sheet_to_json<RawExcelRow>(sheet, { defval: '' });
-    console.log('--- EXCEL PARSE DIAGNOSTICS ---');
-    console.log('rawData length:', rawData.length);
-    if (rawData.length > 0) console.log('Sample raw row:', rawData[0]);
-
     const normalizedRows: ExcelRow[] = rawData.map(normalizeRow);
-    if (normalizedRows.length > 0) console.log('Sample normalized row:', normalizedRows[0]);
-    
+
     let skippedMissingRegister = 0;
     let skippedMissingName = 0;
     let rankOnlyRows = 0;
@@ -197,19 +189,17 @@ export async function POST(request: NextRequest) {
             ? { type: 'Gallery' as const }
             : { type: 'Ground' as const },
           email_status: { sent: false, opened: false, clicked: false },
-          seating_raw: (row.seating || '').trim(),
+          seating_raw: '',
         };
         studentMap.set(regNo, student);
       }
     }
 
-    let studentsArray: ImportedStudent[] = Array.from(studentMap.values());
-    console.log('Valid students after processing:', studentsArray.length);
-    console.log('Skipped register:', skippedMissingRegister, 'Skipped name:', skippedMissingName);
+    const studentsArray: ImportedStudent[] = Array.from(studentMap.values());
 
-    // Assign seats for ground floor
+    // Seats are assigned fully by backend rules using upload order and award types.
     if (uploadType === 'ground') {
-      studentsArray = assignGroundSeats(studentsArray);
+      assignGroundSeats(studentsArray);
     }
 
     // Upsert into MongoDB

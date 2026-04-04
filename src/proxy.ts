@@ -4,8 +4,8 @@ import { jwtVerify } from 'jose';
 
 const protectedPaths: Record<string, string[]> = {
   '/admin': ['admin'],
-  '/volunteer': ['admin', 'volunteer'],
-  '/mc': ['admin', 'mc'],
+  '/volunteer': ['volunteer'],
+  '/mc': ['mc'],
   '/api/admin': ['admin'],
   '/api/upload': ['admin'],
   '/api/email': ['admin'],
