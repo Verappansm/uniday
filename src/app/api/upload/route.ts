@@ -161,8 +161,9 @@ export async function POST(request: NextRequest) {
     const sheet = workbook.Sheets[sheetName];
     const rawData: ExcelRow[] = XLSX.utils.sheet_to_json(sheet);
 
-    // Merge duplicates by register_no
+    // Merge duplicates by register_no, preserving first-seen order
     const studentMap = new Map<string, any>();
+    let uploadOrderCounter = 1;
 
     for (const row of rawData) {
       const regNo = String(row.register_no || '').trim();
@@ -195,6 +196,7 @@ export async function POST(request: NextRequest) {
           rsvp_status: null,
           qr_code: randomBytes(16).toString('hex'),
           checked_in: false,
+          upload_order: uploadOrderCounter++,
           seating_category: uploadType === 'gallery' ? 'gallery' : 'ground',
           seat: uploadType === 'gallery'
             ? { type: 'Gallery' as const }

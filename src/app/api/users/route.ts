@@ -32,15 +32,20 @@ export async function GET(request: NextRequest) {
     }
 
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const skip = (page - 1) * limit;
+    const limitParam = parseInt(searchParams.get('limit') || '50');
+    const limit = limitParam === 0 ? 0 : limitParam; // 0 means fetch all
+    const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+    const sortField = searchParams.get('sort');
+    const sortObj: Record<string, 1 | -1> =
+      sortField === 'upload_order' ? { upload_order: 1 } : { register_no: 1 };
 
     const [users, total] = await Promise.all([
-      User.find(filter).skip(skip).limit(limit).sort({ register_no: 1 }),
+      User.find(filter).skip(skip).limit(limit).sort(sortObj),
       User.countDocuments(filter),
     ]);
 
-    return NextResponse.json({ users, total, page, pages: Math.ceil(total / limit) });
+    return NextResponse.json({ users, total, page, pages: limit === 0 ? 1 : Math.ceil(total / limit) });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

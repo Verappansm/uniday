@@ -26,6 +26,7 @@ export interface IUser extends Document {
   rsvp_status: 'yes' | 'no' | null;
   rsvp_reason?: string;
   qr_code: string;
+  upload_order: number;
   checked_in: boolean;
   seating_category: 'ground' | 'gallery';
   seat?: ISeat;
@@ -65,6 +66,7 @@ const UserSchema = new Schema<IUser>({
   rsvp_status: { type: String, enum: ['yes', 'no', null], default: null },
   rsvp_reason: { type: String },
   qr_code: { type: String, required: true, unique: true },
+  upload_order: { type: Number, default: 0 },
   checked_in: { type: Boolean, default: false },
   seating_category: { type: String, enum: ['ground', 'gallery'], default: 'ground' },
   seat: SeatSchema,
