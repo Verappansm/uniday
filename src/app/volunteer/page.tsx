@@ -854,9 +854,9 @@ export default function VolunteerPage() {
                     padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
                     textTransform: 'uppercase', letterSpacing: '0.08em', display: 'inline-block',
                     marginBottom: '8px',
-                    background: result.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                    color: result.status === 'success' ? '#10b981' : '#f59e0b',
-                    border: `1px solid ${result.status === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                    background: result.status === 'success' ? 'rgba(163,163,163,0.1)' : 'rgba(128,128,128,0.1)',
+                    color: result.status === 'success' ? '#a3a3a3' : '#808080',
+                    border: `1px solid ${result.status === 'success' ? 'rgba(163,163,163,0.2)' : 'rgba(128,128,128,0.2)'}`,
                   }}>
                     {result.status === 'success' ? '✓ Check-in Successful' : '⚠ Already Checked In'}
                   </div>
@@ -908,9 +908,9 @@ export default function VolunteerPage() {
                     {result.student.awards.map((a, i) => (
                       <span key={`${a.type}-${i}`} style={{
                         padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 600,
-                        background: a.type === 'merit' ? 'rgba(251,191,36,0.1)' : 'rgba(99,102,241,0.1)',
-                        color: a.type === 'merit' ? '#fbbf24' : '#818cf8',
-                        border: `1px solid ${a.type === 'merit' ? 'rgba(251,191,36,0.2)' : 'rgba(99,102,241,0.2)'}`,
+                        background: a.type === 'merit' ? 'rgba(136,136,136,0.1)' : 'rgba(153,153,153,0.1)',
+                        color: a.type === 'merit' ? '#888888' : '#999999',
+                        border: `1px solid ${a.type === 'merit' ? 'rgba(136,136,136,0.2)' : 'rgba(153,153,153,0.2)'}`,
                         textTransform: 'uppercase', letterSpacing: '0.04em'
                       }}>
                         {a.type}: {a.details}
