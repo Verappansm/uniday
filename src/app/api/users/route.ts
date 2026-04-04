@@ -19,7 +19,14 @@ export async function GET(request: NextRequest) {
     if (rsvp) filter.rsvp_status = rsvp;
 
     const checkedIn = searchParams.get('checked_in');
-    if (checkedIn) filter.checked_in = checkedIn === 'true';
+    if (checkedIn === 'true' || checkedIn === 'present') filter.checked_in = true;
+    else if (checkedIn === 'false' || checkedIn === 'absent') filter.checked_in = false;
+
+    const emailStatus = searchParams.get('email_status');
+    if (emailStatus === 'sent') filter['email_status.sent'] = true;
+    else if (emailStatus === 'pending') filter['email_status.sent'] = false;
+    else if (emailStatus === 'opened') filter['email_status.opened'] = true;
+    else if (emailStatus === 'clicked') filter['email_status.clicked'] = true;
 
     const category = searchParams.get('category');
     if (category) filter.seating_category = category;

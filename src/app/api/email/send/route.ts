@@ -70,6 +70,14 @@ export async function POST() {
       .filter((user) => sentAddresses.has(user.email.toLowerCase()))
       .map((user) => user._id);
 
+    const sentRecipients = users
+      .filter((user) => sentAddresses.has(user.email.toLowerCase()))
+      .map((user) => ({
+        register_no: user.register_no,
+        student_name: user.student_name,
+        email: user.email,
+      }));
+
     if (sentIds.length > 0) {
       await User.updateMany(
         { _id: { $in: sentIds } },
@@ -89,6 +97,7 @@ export async function POST() {
       attempted: users.length,
       sent: sentIds.length,
       failed: failed.length,
+      sent_recipients: sentRecipients,
       failures: failed,
     });
   } catch (error: unknown) {
