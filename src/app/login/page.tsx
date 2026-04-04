@@ -105,47 +105,45 @@ export default function LoginPage() {
         }} />
 
       {/* College Logos Container */}
-      <div 
+      <div
         suppressHydrationWarning
         style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 'clamp(50px, 12vw, 100px)',
-          marginBottom: 'clamp(10px, 1.5vh, 16px)',
+          gap: 'clamp(30px, 8vw, 60px)',
           zIndex: 10,
+          marginBottom: 'clamp(24px, 4vh, 40px)',
         }}>
         {/* Logo 1 */}
-        <div style={{ position: 'relative', width: 'clamp(120px, 20vw, 200px)', height: 'clamp(120px, 20vw, 200px)', background: 'transparent', overflow: 'hidden' }}>
-          <Image
-            src="/logo1.png"
-            alt="College 1"
-            fill
-            sizes="(max-width: 640px) 120px, (max-width: 1024px) 150px, 200px"
-            style={{
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))'
-            }}
-            onError={() => { }}
-            priority
-          />
-        </div>
+        <Image
+          src="/logo1.png"
+          alt="College 1"
+          width={100}
+          height={100}
+          style={{
+            width: 'clamp(100px, 18vw, 160px)',
+            height: 'auto',
+            filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))',
+          }}
+          onError={() => { }}
+          priority
+        />
 
         {/* Logo 2 */}
-        <div style={{ position: 'relative', width: 'clamp(120px, 20vw, 200px)', height: 'clamp(120px, 20vw, 200px)', background: 'transparent', overflow: 'hidden' }}>
-          <Image
-            src="/logo2.png"
-            alt="College 2"
-            fill
-            sizes="(max-width: 640px) 120px, (max-width: 1024px) 150px, 200px"
-            style={{
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))'
-            }}
-            onError={() => { }}
-            priority
-          />
-        </div>
+        <Image
+          src="/logo2.png"
+          alt="College 2"
+          width={100}
+          height={100}
+          style={{
+            width: 'clamp(100px, 18vw, 160px)',
+            height: 'auto',
+            filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))',
+          }}
+          onError={() => { }}
+          priority
+        />
       </div>
 
       <div className="glass-card fade-in" style={{

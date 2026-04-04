@@ -110,80 +110,108 @@ function generateEmailText(email) {
 }
 
 function generateEmailHTML(email) {
-  var awards = Array.isArray(email.awards) ? email.awards : [];
-  var awardsText = escapeHtml(email.awards_text || 'Award');
-  var multiAward = awards.length > 1;
-  var qrImageUrl = 'https://quickchart.io/qr?size=220&text=' + encodeURIComponent(email.qr_data || '');
-  var awardListHtml = '';
-
-  if (awards.length > 0) {
-    for (var i = 0; i < awards.length; i++) {
-      awardListHtml +=
-        '<li style="margin:0 0 8px;color:#f0f0f5;font-size:14px;line-height:1.5;">' +
-        '<strong style="text-transform:capitalize;">' + escapeHtml(awards[i].type) + '</strong>: ' + escapeHtml(awards[i].details) +
-        '</li>';
-    }
-  } else {
-    awardListHtml = '<li style="margin:0;color:#f0f0f5;font-size:14px;line-height:1.5;">' + awardsText + '</li>';
-  }
+  var awardName = escapeHtml(email.awards_text || (email.awards && email.awards[0] ? email.awards[0].type : 'Award'));
+  var awardDetails = escapeHtml(email.awards && email.awards[0] ? email.awards[0].details : '');
+  var rsvpLink = escapeHtml(email.rsvp_link || '');
 
   return '<!DOCTYPE html>' +
     '<html>' +
-    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
-    '<body style="margin:0;padding:0;background:#0a0a0f;font-family:Arial,sans-serif;">' +
-    '<div style="max-width:600px;margin:0 auto;background:#12121a;border-radius:16px;overflow:hidden;margin-top:20px;margin-bottom:20px;">' +
+    '<head>' +
+    '<meta charset="UTF-8">' +
+    '<title>University Day Invitation</title>' +
+    '</head>' +
+    '<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f6f8;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px;">' +
+    '<tr>' +
+    '<td align="center">' +
+    '<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; padding:30px;">' +
 
     // Header
-    '<div style="background:linear-gradient(135deg,#6366f1,#7c3aed);padding:40px 30px;text-align:center;">' +
-    '<h1 style="color:white;margin:0;font-size:28px;">🎓 UniDay</h1>' +
-    '<p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:14px;">Award Ceremony Invitation</p>' +
-    '</div>' +
+    '<tr>' +
+    '<td align="center" style="padding-bottom:20px;">' +
+    '<h2 style="margin:0; color:#2c3e50;">VIT Chennai</h2>' +
+    '<p style="margin:5px 0 0; color:#7f8c8d;">University Day Invitation</p>' +
+    '</td>' +
+    '</tr>' +
 
-    // Body
-    '<div style="padding:30px;">' +
-    '<p style="color:#f0f0f5;font-size:18px;margin:0 0 8px;">Hello <strong>' + escapeHtml(email.name) + '</strong>,</p>' +
-    '<p style="color:#8b8ba3;font-size:14px;line-height:1.6;margin:0 0 24px;">You have been selected for the following award(s) at our university ceremony:</p>' +
+    // Greeting
+    '<tr>' +
+    '<td style="color:#2c3e50; font-size:16px;">' +
+    'Dear ' + escapeHtml(email.name || 'Student') + ',' +
+    '<br><br>' +
+    'Warm greetings from VIT Chennai!' +
+    '<br><br>' +
+    'We are pleased to congratulate you on your remarkable achievement.' +
+    '</td>' +
+    '</tr>' +
 
-    // Awards
-    '<div style="background:#1c1c28;border:1px solid #2d2d4a;border-radius:12px;padding:16px;margin-bottom:24px;">' +
-    '<p style="color:#818cf8;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;font-weight:bold;">Your Award(s)</p>' +
-    '<ul style="padding-left:18px;margin:0;">' + awardListHtml + '</ul>' +
-    '</div>' +
+    // Award Section
+    '<tr>' +
+    '<td style="padding:15px 0; color:#2c3e50; font-size:16px;">' +
+    'You have been awarded the <strong>' + awardName + '</strong>' +
+    (awardDetails ? ' <span style="color:#555;">(' + awardDetails + ')</span>' : '') + '.' +
+    '</td>' +
+    '</tr>' +
 
-    (multiAward
-      ? '<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.28);border-radius:12px;padding:14px 16px;margin-bottom:24px;">' +
-        '<p style="color:#fbbf24;font-size:13px;line-height:1.6;margin:0;"><strong>Multiple awards detected.</strong> Please contact the event representative on arrival for seating and stage instructions.</p>' +
-        '</div>'
-      : '') +
+    // Note
+    '<tr>' +
+    '<td style="color:#555; font-size:15px;">' +
+    'Your accomplishment is highly commendable, and we take great pride in recognizing your success.' +
+    '</td>' +
+    '</tr>' +
 
-    '<p style="color:#8b8ba3;font-size:14px;line-height:1.6;margin:0 0 24px;">Please RSVP to confirm your attendance. Your seat assignment and QR code for event-day check-in will be available after confirming.</p>' +
+    // Event Details
+    '<tr>' +
+    '<td style="padding-top:20px;">' +
+    '<h3 style="margin-bottom:10px; color:#2c3e50;">Event Details</h3>' +
+    '<p style="margin:5px 0;"><strong>Date:</strong> April 7th (Tuesday)</p>' +
+    '<p style="margin:5px 0;"><strong>Time:</strong> 9:00 AM – 1:30 PM</p>' +
+    '<p style="margin:5px 0;"><strong>Venue:</strong> MG Auditorium</p>' +
+    '</td>' +
+    '</tr>' +
 
-    // CTA Button
-    '<div style="text-align:center;margin:32px 0;">' +
-    '<a href="' + escapeHtml(email.rsvp_link) + '" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#7c3aed);color:white;text-decoration:none;padding:16px 40px;border-radius:12px;font-weight:bold;font-size:16px;">RSVP Now</a>' +
-    '</div>' +
+    // QR Code
+    '<tr>' +
+    '<td style="padding-top:20px; text-align:center;">' +
+    (email.qr_data ? '<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(email.qr_data) + '" width="220" height="220" style="border:1px solid #ddd; border-radius:8px; padding:10px; background:#fff;" alt="QR Code" />' : '') +
+    '</td>' +
+    '</tr>' +
 
-    '<div style="background:#ffffff;border-radius:16px;padding:18px;margin:0 auto 20px;max-width:260px;text-align:center;">' +
-    '<img src="' + qrImageUrl + '" alt="QR Code" width="220" height="220" style="display:block;margin:0 auto 10px;" />' +
-    '<p style="color:#111827;font-size:12px;line-height:1.5;margin:0;">Use this QR code for event-day verification after RSVP confirmation.</p>' +
-    '</div>' +
+    // Instructions
+    '<tr>' +
+    '<td style="padding-top:15px; color:#555; font-size:15px;">' +
+    'You are requested to assemble sharp at <strong>9:00 AM</strong> at the MG Auditorium.' +
+    '<br><br>' +
+    'Kindly <strong><a href="' + rsvpLink + '" style="color:#2980b9; text-decoration:none;">RSVP to confirm your attendance</a></strong>. This is mandatory, as the QR code provided will be used for entry on the day of the event.' +
+    '</td>' +
+    '</tr>' +
 
-    '<p style="color:#5b5b73;font-size:12px;text-align:center;margin:24px 0 0;">Register No: ' + escapeHtml(email.register_no) + '</p>' +
-    '</div>' +
+    // RSVP Button
+    '<tr>' +
+    '<td style="padding-top:20px; text-align:center;">' +
+    '<a href="' + rsvpLink + '" style="display:inline-block; background-color:#2980b9; color:#ffffff; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold;">RSVP Now</a>' +
+    '</td>' +
+    '</tr>' +
 
     // Footer
-    '<div style="padding:20px 30px;border-top:1px solid #1e1e2e;text-align:center;">' +
-    '<p style="color:#5b5b73;font-size:11px;margin:0;">This is an automated email from UniDay Award Ceremony Management System.</p>' +
-    '</div>' +
+    '<tr>' +
+    '<td style="padding-top:30px; color:#7f8c8d; font-size:14px;">' +
+    'We look forward to celebrating your achievement.' +
+    '<br><br>' +
+    'Warm regards,<br>' +
+    '<strong>VIT Chennai</strong>' +
+    '</td>' +
+    '</tr>' +
 
-    '</div>' +
+    '</table>' +
+    '</td>' +
+    '</tr>' +
+    '</table>' +
 
-    // Tracking pixel
-    (email.tracking_pixel
-      ? '<img src="' + escapeHtml(email.tracking_pixel) + '" width="1" height="1" style="display:none;" />'
-      : '') +
+    (email.tracking_pixel ? '<img src="' + escapeHtml(email.tracking_pixel) + '" width="1" height="1" style="display:none;" />' : '') +
 
-    '</body></html>';
+    '</body>' +
+    '</html>';
 }
 
 // Test function
