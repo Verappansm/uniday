@@ -59,7 +59,7 @@ const seatToneMap: Record<SeatMap['rows'][number]['seats'][number]['state'], str
 };
 
 function seatLabel(student: Student) {
-  if (student.seating_category === 'gallery') return 'Gallery';
+  if (student.seating_category === 'gallery' || student.seat?.type?.toLowerCase() === 'gallery') return 'Gallery Area';
   if (student.seat?.section) return `${student.seat.section}-${student.seat.row}${student.seat.column}`;
   return 'N/A';
 }
@@ -920,7 +920,7 @@ export default function VolunteerPage() {
                 </div>
               )}
 
-              {result.seatMap && (
+              {result.seatMap && result.student.seating_category !== 'gallery' && result.student.seat?.type?.toLowerCase() !== 'gallery' && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
                     <div>

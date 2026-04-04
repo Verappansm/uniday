@@ -94,7 +94,7 @@ export default function MCPage() {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ sort: 'upload_order', limit: '0', category: 'ground' });
+      const params = new URLSearchParams({ sort: 'seating', limit: '0', category: 'ground' });
       if (filter === 'checked_in') params.set('checked_in', 'true');
       if (filter === 'absent') params.set('checked_in', 'false');
       const res = await fetch(`/api/users?${params}`);
@@ -150,15 +150,6 @@ export default function MCPage() {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return s.student_name.toLowerCase().includes(q) || s.register_no.toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      const [aSection, aRow, aCol] = getSeatSortValue(a);
-      const [bSection, bRow, bCol] = getSeatSortValue(b);
-
-      if (aSection !== bSection) return aSection - bSection;
-      if (aRow !== bRow) return aRow - bRow;
-      if (aCol !== bCol) return aCol - bCol;
-      return a.upload_order - b.upload_order;
     });
 
   const seatMap = new Map<string, Student>();
@@ -168,62 +159,49 @@ export default function MCPage() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#e2e2e2', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif' }}>
 
       {/* ── HEADER ── */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(13,13,13,0.95)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1e1e1e',
+        borderBottom: '1px solid var(--border-subtle)',
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '14px 24px' }}>
 
           {/* Row 1: title + stats + logout */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', letterSpacing: '-0.01em' }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 MC Panel
               </span>
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', background: '#171717', border: '1px solid #222', padding: '6px 14px', borderRadius: '10px' }}>
-              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#999999' }} />
-                <span>Total <strong style={{ color: '#e2e2e2' }}>{students.length}</strong></span>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '6px 14px', borderRadius: '10px' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success-glow)' }} />
+                Present: <strong style={{ color: 'var(--success)', marginLeft: '2px' }}>{presentCount}</strong>
               </span>
-              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3', boxShadow: '0 0 10px rgba(163,163,163,0.4)' }} />
-                <span>Present <strong style={{ color: '#a3a3a3' }}>{presentCount}</strong></span>
+              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--warning)', boxShadow: '0 0 6px var(--warning-glow)' }} />
+                Absent: <strong style={{ color: 'var(--warning)', marginLeft: '2px' }}>{absentCount}</strong>
               </span>
-              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#595959' }} />
-                <span>Absent <strong style={{ color: '#e2e2e2' }}>{absentCount}</strong></span>
+              <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-muted)' }} />
+                Total Ground: <strong style={{ color: 'var(--text-secondary)', marginLeft: '2px' }}>{students.length}</strong>
               </span>
-            </div>
-
-            {/* Live indicator */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '4px 10px', background: 'rgba(163,163,163,0.05)',
-              border: '1px solid rgba(163,163,163,0.2)', borderRadius: '20px',
-              marginLeft: 'auto'
-            }}>
-              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3' }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#a3a3a3', letterSpacing: '0.04em' }}>LIVE</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={handleLogout}
                 style={{
-                  background: 'none', border: '1px solid #2a2a2a',
-                  borderRadius: '8px', color: '#888', padding: '5px 14px',
+                  background: 'none', border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px', color: 'var(--text-muted)', padding: '5px 14px',
                   fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
                   transition: 'border-color 0.15s, color 0.15s',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#444'; (e.currentTarget as HTMLElement).style.color = '#ccc'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#2a2a2a'; (e.currentTarget as HTMLElement).style.color = '#888'; }}
               >
                 Logout
               </button>
@@ -233,20 +211,20 @@ export default function MCPage() {
           {/* Row 2: filter + search + view */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {/* Filter */}
-            <div style={{ display: 'flex', gap: '2px', background: '#171717', border: '1px solid #222', borderRadius: '8px', padding: '3px' }}>
+            <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '3px' }}>
               {(['all', 'checked_in', 'absent'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => { setFilter(f); setSearch(''); }}
                   style={{
-                    padding: '5px 14px', borderRadius: '6px',
-                    border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500,
-                    fontFamily: 'Inter, sans-serif', transition: 'all 0.15s',
-                    background: filter === f ? '#262626' : 'transparent',
-                    color: filter === f ? '#e2e2e2' : '#555',
+                    padding: '6px 12px', borderRadius: '6px', border: 'none',
+                    fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                    background: filter === f ? 'var(--bg-card-hover)' : 'transparent',
+                    color: filter === f ? 'var(--text-primary)' : 'var(--text-muted)',
+                    transition: 'all 0.1s',
                   }}
                 >
-                  {f === 'all' ? 'All' : f === 'checked_in' ? 'Present' : 'Absent'}
+                  {f.charAt(0).toUpperCase() + f.slice(1).replace('_', ' ')}
                 </button>
               ))}
             </div>
@@ -259,33 +237,30 @@ export default function MCPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search name or reg no…"
                   style={{
-                    background: '#171717', border: '1px solid #222',
-                    borderRadius: '8px', color: '#e2e2e2',
-                    padding: '6px 12px 6px 32px', fontSize: '0.78rem',
-                    fontFamily: 'Inter, sans-serif', outline: 'none', width: '240px',
-                    transition: 'border-color 0.15s',
+                    width: '240px', padding: '7px 12px 7px 32px', fontSize: '0.75rem',
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px', color: 'var(--text-primary)',
+                    outline: 'none', transition: 'all 0.15s',
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#444'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#222'; }}
                 />
-                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#444', fontSize: '0.8rem' }}>⌕</span>
+                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '0.8rem' }}>⌕</span>
               </div>
 
             {/* View toggle */}
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', background: '#171717', border: '1px solid #222', borderRadius: '8px', padding: '3px' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '3px' }}>
               {(['list', 'seating'] as const).map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
                   style={{
-                    padding: '5px 14px', borderRadius: '6px',
-                    border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 500,
-                    fontFamily: 'Inter, sans-serif', transition: 'all 0.15s',
-                    background: view === v ? '#262626' : 'transparent',
-                    color: view === v ? '#e2e2e2' : '#555',
+                    padding: '6px 12px', borderRadius: '6px', border: 'none',
+                    fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                    background: view === v ? 'var(--bg-card-hover)' : 'transparent',
+                    color: view === v ? 'var(--text-primary)' : 'var(--text-muted)',
+                    transition: 'all 0.1s',
                   }}
                 >
-                  {v === 'list' ? 'List' : 'Seating Map'}
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
                 </button>
               ))}
             </div>
@@ -366,35 +341,35 @@ export default function MCPage() {
                         {s.student_name}
                       </span>
                       {multi && (
-                        <span style={{ fontSize: '0.6rem', color: '#888', border: '1px solid #2e2e2e', borderRadius: '4px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
                           multi
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#444', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {s.register_no}
                     </div>
                   </div>
 
                   <div />
 
-                  <div style={{ fontSize: '0.78rem', color: present ? '#d4d4d4' : '#8a8a8a', textTransform: 'capitalize' }}>
+                  <div style={{ fontSize: '0.78rem', color: present ? 'var(--text-primary)' : 'var(--text-muted)', textTransform: 'capitalize' }}>
                     {getAwardText(s)}
                   </div>
 
-                  <div style={{ fontSize: '0.8rem', color: present ? '#f4f4f5' : '#a3a3a3', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.8rem', color: present ? 'var(--text-secondary)' : 'var(--text-muted)', fontWeight: 600 }}>
                     {getRankText(s)}
                   </div>
 
-                  <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: present ? '#d4d4d4' : '#8a8a8a', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: present ? 'var(--text-secondary)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     {getSeatLabel(s)}
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                     {present ? (
-                      <span style={{ fontSize: '0.68rem', color: '#a3a3a3', fontWeight: 600, letterSpacing: '0.04em' }}>Present</span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--success)', fontWeight: 600, letterSpacing: '0.04em' }}>Present</span>
                     ) : (
-                      <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: 600, letterSpacing: '0.04em' }}>Absent</span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--danger)', fontWeight: 600, letterSpacing: '0.04em' }}>Absent</span>
                     )}
                   </div>
                 </div>
@@ -423,12 +398,12 @@ export default function MCPage() {
               {/* Legend */}
               <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Empty', bg: '#242424', border: '#3a3a3a', color: '#666' },
-                  { label: 'Absent', bg: '#1a1a1a', border: '#3a3a3a', color: '#808080' },
-                  { label: 'Present', bg: '#1a1a1a', border: '#3a3a3a', color: '#a3a3a3' },
+                  { label: 'Empty', bg: 'transparent', border: 'var(--border-subtle)', color: 'var(--text-muted)' },
+                  { label: 'Reserved', bg: 'var(--warning-glow)', border: 'var(--warning)', color: 'var(--warning)' },
+                  { label: 'Present', bg: 'var(--success)', border: 'var(--success)', color: '#000' },
                 ].map(({ label, bg, border, color }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color }}>
-                    <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: bg, border: `1px solid ${border}` }} />
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: bg, border: `1px solid ${border}`, boxShadow: label === 'Present' ? '0 0 8px var(--success-glow)' : 'none' }} />
                     {label}
                   </div>
                 ))}
@@ -465,36 +440,36 @@ export default function MCPage() {
                               student.register_no.toLowerCase().includes(search.toLowerCase())
                             );
 
-                            let bg = '#171717';
-                            let borderColor = '#222';
-                            let color = '#333';
+                            let bg = 'var(--bg-secondary)';
+                            let borderColor = 'var(--border-subtle)';
+                            let color = 'var(--text-muted)';
 
                             if (present) {
-                              bg = '#a3a3a3';
-                              borderColor = '#a3a3a3';
-                              color = '#1a1a1a';
+                              bg = 'var(--success)';
+                              borderColor = 'var(--success)';
+                              color = '#000';
                             } else if (occupied) {
                               if (student.rsvp_status === 'yes') {
-                                bg = 'rgba(153, 153, 153, 0.05)';
-                                borderColor = 'rgba(153, 153, 153, 0.3)';
-                                color = '#999999';
+                                bg = 'var(--info-glow)';
+                                borderColor = 'var(--info)';
+                                color = 'var(--info)';
                               } else if (student.rsvp_status === 'no') {
-                                bg = 'rgba(89, 89, 89, 0.05)';
-                                borderColor = 'rgba(89, 89, 89, 0.3)';
-                                color = '#595959';
+                                bg = 'var(--danger-glow)';
+                                borderColor = 'var(--danger)';
+                                color = 'var(--danger)';
                               } else {
-                                bg = 'rgba(128, 128, 128, 0.05)';
-                                borderColor = 'rgba(128, 128, 128, 0.3)';
-                                color = '#808080';
+                                bg = 'var(--warning-glow)';
+                                borderColor = 'var(--warning)';
+                                color = 'var(--warning)';
                               }
                             }
 
                             if (isSelected) {
-                              borderColor = '#fff';
-                              color = present ? '#1a1a1a' : '#fff';
+                              borderColor = 'var(--accent-primary)';
+                              color = present ? '#000' : 'var(--text-primary)';
                             } else if (isSearchMatch) {
-                              borderColor = '#999999';
-                              bg = 'rgba(153, 153, 153, 0.15)';
+                              borderColor = 'var(--accent-secondary)';
+                              bg = 'var(--accent-glow)';
                             }
 
                             return (
@@ -516,7 +491,7 @@ export default function MCPage() {
                                   transition: 'all 0.1s',
                                   boxShadow: isSelected
                                     ? '0 0 0 2px rgba(255,255,255,0.15)'
-                                    : present ? '0 0 12px rgba(163, 163, 163, 0.4)' : isSearchMatch ? '0 0 12px #999999' : 'none',
+                                    : present ? '0 0 12px var(--success-glow)' : isSearchMatch ? '0 0 12px var(--info)' : 'none',
                                   transform: isSelected ? 'scale(1.15)' : isSearchMatch ? 'scale(1.1)' : 'scale(1)',
                                   position: 'relative',
                                   zIndex: isSelected ? 10 : isSearchMatch ? 5 : 'auto',
@@ -541,16 +516,16 @@ export default function MCPage() {
               opacity: selectedSeat ? 1 : 0,
               overflow: 'hidden',
               transition: 'width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease',
-              position: 'sticky', top: '120px',
-              background: '#111', border: selectedSeat ? '1px solid #1e1e1e' : 'none',
-              borderRadius: '12px',
+              background: 'var(--bg-card)',
+              borderLeft: selectedSeat ? '1px solid var(--border-subtle)' : 'none',
+              borderRadius: '0 0 0 0',
             }}>
               {/* Panel header */}
               <div style={{
                 padding: '14px 18px',
-                borderBottom: '1px solid #1a1a1a',
+                borderBottom: '1px solid var(--border-subtle)',
                 fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: '#3a3a3a',
+                textTransform: 'uppercase', color: 'var(--text-muted)',
               }}>
                 Seat Details
               </div>
@@ -558,18 +533,20 @@ export default function MCPage() {
               {selectedSeat && (
                 (() => {
                   const s = selectedSeat;
-                  const accentColor = s.checked_in ? '#a3a3a3' : '#808080';
+                  const accentColor = s.checked_in ? 'var(--success)' : 'var(--warning)';
+                  const accentGlow = s.checked_in ? 'var(--success-glow)' : 'var(--warning-glow)';
                   return (
                     <div style={{ padding: '18px' }}>
                       {/* Status bar */}
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         marginBottom: '16px', paddingBottom: '14px',
-                        borderBottom: '1px solid #1a1a1a',
+                        borderBottom: '1px solid var(--border-subtle)',
                       }}>
                         <span style={{
                           width: '8px', height: '8px', borderRadius: '50%',
                           background: accentColor, display: 'inline-block', flexShrink: 0,
+                          boxShadow: `0 0 8px ${accentGlow}`,
                         }} />
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: accentColor, letterSpacing: '0.06em' }}>
                           {s.checked_in ? 'Present' : 'Not arrived'}
@@ -579,21 +556,21 @@ export default function MCPage() {
                             onClick={() => setSelectedSeat(null)}
                             style={{
                               marginLeft: 'auto', background: 'none', border: 'none',
-                              color: '#666', cursor: 'pointer', fontSize: '1.2rem',
+                              color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem',
                               lineHeight: 1, padding: '0 8px', transition: 'color 0.1s',
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#eee')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#666')}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                             title="Deselect"
                           >×</button>
                         )}
                       </div>
 
                       {/* Name */}
-                      <p style={{ fontWeight: 700, fontSize: '1rem', color: '#e2e2e2', marginBottom: '4px', lineHeight: 1.3 }}>
+                      <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '4px', lineHeight: 1.3 }}>
                         {s.student_name}
                       </p>
-                      <p style={{ fontSize: '0.7rem', color: '#444', fontFamily: 'monospace', marginBottom: '12px' }}>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: '12px' }}>
                         {s.register_no}
                       </p>
 
@@ -606,25 +583,25 @@ export default function MCPage() {
                         <div key={label} style={{
                           display: 'flex', justifyContent: 'space-between',
                           alignItems: 'flex-start', gap: '8px',
-                          padding: '7px 0', borderBottom: '1px solid #161616',
+                          padding: '7px 0', borderBottom: '1px solid var(--border-subtle)',
                         }}>
-                          <span style={{ fontSize: '0.68rem', color: '#3a3a3a', fontWeight: 600, flexShrink: 0 }}>{label}</span>
-                          <span style={{ fontSize: '0.72rem', color: '#888', textAlign: 'right', wordBreak: 'break-word', fontFamily: label === 'Seat' ? 'monospace' : 'inherit' }}>{val}</span>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>{label}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'right', wordBreak: 'break-word', fontFamily: label === 'Seat' ? 'monospace' : 'inherit' }}>{val}</span>
                         </div>
                       ))}
 
                       {/* Awards */}
                       {s.awards.length > 0 && (
                         <div style={{ marginTop: '14px' }}>
-                          <p style={{ fontSize: '0.68rem', color: '#3a3a3a', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Awards</p>
+                          <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Awards</p>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             {s.awards.map((a, i) => (
                               <div key={i} style={{
-                                background: '#161616', border: '1px solid #222',
+                                background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
                                 borderRadius: '6px', padding: '7px 10px',
                               }}>
-                                <span style={{ fontSize: '0.68rem', color: '#666', textTransform: 'capitalize', display: 'block', marginBottom: '1px' }}>{a.type}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#aaa' }}>{a.details}</span>
+                                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'capitalize', display: 'block', marginBottom: '1px' }}>{a.type}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{a.details}</span>
                               </div>
                             ))}
                           </div>

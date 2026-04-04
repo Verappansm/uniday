@@ -135,6 +135,7 @@ export default function AdminPage() {
       if (filterCheckedIn) params.set('checked_in', filterCheckedIn);
       params.set('page', String(currentPage));
       params.set('limit', '50');
+      params.set('sort', 'seating');
 
       const res = await fetch(`/api/users?${params}`);
       const data = await res.json();
@@ -217,7 +218,7 @@ export default function AdminPage() {
     router.push('/login');
   };
 
-  const handleUpload = async (type: 'ground' | 'gallery') => {
+  const handleUpload = async (type: 'ground' | 'gallery' | 'clubs') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx,.xls,.csv';
@@ -279,21 +280,23 @@ export default function AdminPage() {
         <div style={{
           textAlign: 'center',
           padding: '12px 40px',
-          background: '#1a1a1a',
-          color: '#e2e2e2',
-          border: '1px solid #333',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border-accent)',
           borderRadius: '12px',
-          marginBottom: '24px',
+          margin: '0 auto 32px auto',
+          maxWidth: '1200px',
           fontWeight: 800,
-          fontSize: '0.8rem',
-          letterSpacing: '0.2em',
+          fontSize: '0.9rem',
+          letterSpacing: '0.3em',
           textTransform: 'uppercase',
+          boxShadow: '0 0 30px rgba(255, 255, 255, 0.05)',
         }}>
           🎤 STAGE
         </div>
 
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Map Legend */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
           {[
             { cls: 'seat-empty', label: 'Empty' },
             { cls: 'seat-reserved', label: 'Reserved' },
@@ -301,24 +304,31 @@ export default function AdminPage() {
             { cls: 'seat-rsvp-no', label: 'RSVP No' },
             { cls: 'seat-checked-in', label: 'Checked In' },
           ].map((l) => (
-            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              <div className={`seat-cell ${l.cls}`} style={{ width: '20px', height: '20px' }} />
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              <div className={`seat-cell ${l.cls}`} style={{ width: '28px', height: '28px' }} />
               {l.label}
             </div>
           ))}
         </div>
 
-        {/* Sections grid — horizontal scroll so all 4 are visible at once */}
-        <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+        {/* 2x2 Grid for sections centered */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, minmax(400px, 1fr))', 
+          gap: '32px', 
+          paddingBottom: '40px',
+          maxWidth: '1200px',
+          margin: '0 auto'
+        }}>
           {sections.map((section) => (
-            <div key={section} className="glass-card" style={{ padding: '12px', minWidth: '0', flex: '1 1 0' }}>
-              <h3 style={{ textAlign: 'center', marginBottom: '12px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
+            <div key={section} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', fontWeight: 800, color: 'var(--accent-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>
                 Section {section.replace('S', '')}
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {rows.map((row) => (
-                  <div key={row} style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                    <span style={{ width: '16px', fontSize: '0.55rem', color: 'var(--text-muted)', textAlign: 'center' }}>{row}</span>
+                  <div key={row} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <span style={{ width: '20px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textAlign: 'right', marginRight: '8px' }}>{row}</span>
                     {cols.map((col) => {
                       const key = `${section}-${row}${col}`;
                       const student = seatMap[key];
@@ -410,10 +420,10 @@ export default function AdminPage() {
         <div style={{ marginBottom: '32px', padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
           {!sidebarCollapsed && (
             <div>
-              <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
-                UniDay
-              </h1>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                  UniDay
+                </h1>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
             </div>
           )}
           <button
@@ -497,7 +507,7 @@ export default function AdminPage() {
             {/* Top stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               <div className="stat-card">
-                <div className="stat-value" style={{ color: '#fff' }}>{stats.total}</div>
+                <div className="stat-value" style={{ color: 'var(--text-primary)' }}>{stats.total}</div>
                 <div className="stat-label">Total Students</div>
               </div>
               <div className="stat-card">
@@ -606,12 +616,12 @@ export default function AdminPage() {
             </div>
 
             {/* Upload buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
               <div className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🏛️</div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '8px' }}>Ground Floor</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                  Rank 1-3 students, BOGS, Club awards.<br />Seats will be auto-assigned.
+                  Rank 1-3 students, BOGS.<br />Seats will be auto-assigned.
                 </p>
                 <button
                   onClick={() => handleUpload('ground')}
@@ -620,6 +630,22 @@ export default function AdminPage() {
                   style={{ width: '100%' }}
                 >
                   {uploading ? 'Uploading...' : 'Upload Ground Floor Excel'}
+                </button>
+              </div>
+
+              <div className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🏅</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '8px' }}>Clubs</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                  Club awards only.<br />Allotted to Section 4.
+                </p>
+                <button
+                  onClick={() => handleUpload('clubs')}
+                  className="btn-primary"
+                  disabled={uploading}
+                  style={{ width: '100%', background: 'var(--info)', borderColor: 'var(--info)' }}
+                >
+                  {uploading ? 'Uploading...' : 'Upload Clubs Excel'}
                 </button>
               </div>
 
@@ -694,21 +720,21 @@ export default function AdminPage() {
             {/* Global Quick Stats */}
             {stats && (
               <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Total</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{stats.total}</div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Total</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.total}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>RSVP Accepted</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#a3a3a3' }}>{stats.rsvp.yes}</div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>RSVP Accepted</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--info)' }}>{stats.rsvp.yes}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Checked In</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#a3a3a3' }}>{stats.attendance.checkedIn}</div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Checked In</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--success)' }}>{stats.attendance.checkedIn}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Absence Rate</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#595959' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Absence Rate</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--danger)' }}>
                     {stats.total > 0 ? Math.round(((stats.total - stats.attendance.checkedIn) / stats.total) * 100) : 0}%
                   </div>
                 </div>
@@ -784,23 +810,52 @@ export default function AdminPage() {
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.school}<br />{s.branch}</td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {s.awards.map((a, i) => (
-                            <span key={i} style={{
-                              padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600,
-                              background: a.type === 'merit' ? 'rgba(136,136,136,0.1)' : 'rgba(153,153,153,0.1)',
-                              color: a.type === 'merit' ? '#888888' : '#999999',
-                              border: `1px solid ${a.type === 'merit' ? 'rgba(136,136,136,0.2)' : 'rgba(153,153,153,0.2)'}`,
-                              textTransform: 'uppercase', letterSpacing: '0.04em'
-                            }}>
-                              {a.type}: {a.details}
-                            </span>
-                          ))}
+                          {s.awards.map((a, i) => {
+                            const type = a.type.toLowerCase();
+                            let bg = 'rgba(153,153,153,0.1)';
+                            let color = '#999999';
+                            let border = '1px solid rgba(153,153,153,0.2)';
+
+                            if (type.includes('merit')) {
+                              bg = 'rgba(245,158,11,0.1)';
+                              color = 'var(--warning)';
+                              border = '1px solid rgba(245,158,11,0.2)';
+                            } else if (type.includes('bogs')) {
+                              bg = 'rgba(14,165,233,0.1)';
+                              color = 'var(--info)';
+                              border = '1px solid rgba(14,165,233,0.2)';
+                            } else if (type.includes('attendance')) {
+                              bg = 'rgba(16,185,129,0.1)';
+                              color = 'var(--success)';
+                              border = '1px solid rgba(16,185,129,0.2)';
+                            } else if (type.includes('club') || type.includes('president') || type.includes('member') || type.includes('executive')) {
+                              bg = 'rgba(239,68,68,0.1)';
+                              color = 'var(--danger)';
+                              border = '1px solid rgba(239,68,68,0.2)';
+                            }
+
+                            return (
+                              <span key={i} style={{
+                                padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700,
+                                background: bg, color: color, border: border,
+                                textTransform: 'uppercase', letterSpacing: '0.04em'
+                              }}>
+                                {a.type}: {a.details}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td>
-                        {s.rsvp_status === 'yes' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(163,163,163,0.1)', color: '#a3a3a3', border: '1px solid rgba(163,163,163,0.2)' }}>YES</span>}
-                        {s.rsvp_status === 'no' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(89,89,89,0.1)', color: '#595959', border: '1px solid rgba(89,89,89,0.2)' }}>NO</span>}
-                        {!s.rsvp_status && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(128,128,128,0.1)', color: '#808080', border: '1px solid rgba(128,128,128,0.2)' }}>PENDING</span>}
+                        {s.rsvp_status === 'yes' && (
+                          <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800, background: 'rgba(16,185,129,0.1)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.2)' }}>YES</span>
+                        )}
+                        {s.rsvp_status === 'no' && (
+                          <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800, background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)' }}>NO</span>
+                        )}
+                        {!s.rsvp_status && (
+                          <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 800, background: 'rgba(245,158,11,0.1)', color: 'var(--warning)', border: '1px solid rgba(245,158,11,0.2)' }}>PENDING</span>
+                        )}
                       </td>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                         {s.seating_category === 'gallery' ? (
@@ -811,13 +866,13 @@ export default function AdminPage() {
                       </td>
                       <td>
                         {s.checked_in ? (
-                          <span style={{ color: '#a3a3a3', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3' }} />
+                          <span style={{ color: 'var(--success)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success-glow)' }} />
                             PRESENT
                           </span>
                         ) : (
-                          <span style={{ color: '#595959', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#595959' }} />
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-muted)' }} />
                             ABSENT
                           </span>
                         )}
