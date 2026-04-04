@@ -77,6 +77,7 @@ export default function AdminPage() {
   const [seatStudents, setSeatStudents] = useState<Student[]>([]);
   const [hoveredSeat, setHoveredSeat] = useState<Student | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -307,17 +308,17 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Sections grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        {/* Sections grid — horizontal scroll so all 4 are visible at once */}
+        <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
           {sections.map((section) => (
-            <div key={section} className="glass-card" style={{ padding: '20px' }}>
+            <div key={section} className="glass-card" style={{ padding: '12px', minWidth: '0', flex: '1 1 0' }}>
               <h3 style={{ textAlign: 'center', marginBottom: '12px', fontWeight: 700, color: 'var(--accent-secondary)' }}>
                 Section {section.replace('S', '')}
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {rows.map((row) => (
-                  <div key={row} style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                    <span style={{ width: '20px', fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center' }}>{row}</span>
+                  <div key={row} style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                    <span style={{ width: '16px', fontSize: '0.55rem', color: 'var(--text-muted)', textAlign: 'center' }}>{row}</span>
                     {cols.map((col) => {
                       const key = `${section}-${row}${col}`;
                       const student = seatMap[key];
@@ -392,10 +393,10 @@ export default function AdminPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
       <aside style={{
-        width: '260px',
+        width: sidebarCollapsed ? '72px' : '260px',
         background: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border-subtle)',
-        padding: '24px 16px',
+        padding: sidebarCollapsed ? '24px 8px' : '24px 16px',
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
@@ -403,12 +404,36 @@ export default function AdminPage() {
         left: 0,
         bottom: 0,
         zIndex: 50,
+        transition: 'width 0.2s ease, padding 0.2s ease',
+        overflow: 'hidden',
       }}>
-        <div style={{ marginBottom: '32px', padding: '0 8px' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
-            UniDay
-          </h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
+        <div style={{ marginBottom: '32px', padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between' }}>
+          {!sidebarCollapsed && (
+            <div>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
+                UniDay
+              </h1>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
+            </div>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              padding: '4px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '▶' : '◀'}
+          </button>
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -420,7 +445,8 @@ export default function AdminPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: sidebarCollapsed ? '12px 0' : '12px 16px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 borderRadius: '12px',
                 border: 'none',
                 background: activeTab === tab.id ? 'var(--accent-glow)' : 'transparent',
@@ -432,28 +458,37 @@ export default function AdminPage() {
                 textAlign: 'left',
                 fontFamily: 'Inter, sans-serif',
               }}
+              title={sidebarCollapsed ? tab.label : undefined}
             >
               <span style={{ fontSize: '1.1rem' }}>{tab.icon}</span>
-              {tab.label}
+              {!sidebarCollapsed && tab.label}
             </button>
           ))}
         </nav>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-           <button onClick={() => window.open('/mc', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
-             Go to MC Dashboard ↗
-           </button>
-           <button onClick={() => window.open('/volunteer', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
-             Go to Volunteer ↗
-           </button>
-           <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', marginTop: '8px' }}>
-             Sign Out
-           </button>
+          {!sidebarCollapsed ? (
+            <>
+              <button onClick={() => window.open('/mc', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+                Go to MC Dashboard ↗
+              </button>
+              <button onClick={() => window.open('/volunteer', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+                Go to Volunteer ↗
+              </button>
+              <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', marginTop: '8px' }}>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', padding: '8px 0' }} title="Sign Out">
+              🚪
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, marginLeft: '260px', padding: '32px' }}>
+      <main style={{ flex: 1, marginLeft: sidebarCollapsed ? '72px' : '260px', padding: '32px', transition: 'margin-left 0.2s ease' }}>
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && stats && (
           <div className="fade-in">
@@ -659,21 +694,21 @@ export default function AdminPage() {
             {/* Global Quick Stats */}
             {stats && (
               <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Total</div>
                   <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{stats.total}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>RSVP Accepted</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>{stats.rsvp.yes}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#a3a3a3' }}>{stats.rsvp.yes}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Checked In</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4ade80' }}>{stats.attendance.checkedIn}</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#a3a3a3' }}>{stats.attendance.checkedIn}</div>
                 </div>
-                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#141414', border: '1px solid #1a1a1a' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Absence Rate</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ef4444' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#595959' }}>
                     {stats.total > 0 ? Math.round(((stats.total - stats.attendance.checkedIn) / stats.total) * 100) : 0}%
                   </div>
                 </div>
@@ -752,9 +787,9 @@ export default function AdminPage() {
                           {s.awards.map((a, i) => (
                             <span key={i} style={{
                               padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600,
-                              background: a.type === 'merit' ? 'rgba(251,191,36,0.1)' : 'rgba(99,102,241,0.1)',
-                              color: a.type === 'merit' ? '#fbbf24' : '#818cf8',
-                              border: `1px solid ${a.type === 'merit' ? 'rgba(251,191,36,0.2)' : 'rgba(99,102,241,0.2)'}`,
+                              background: a.type === 'merit' ? 'rgba(136,136,136,0.1)' : 'rgba(153,153,153,0.1)',
+                              color: a.type === 'merit' ? '#888888' : '#999999',
+                              border: `1px solid ${a.type === 'merit' ? 'rgba(136,136,136,0.2)' : 'rgba(153,153,153,0.2)'}`,
                               textTransform: 'uppercase', letterSpacing: '0.04em'
                             }}>
                               {a.type}: {a.details}
@@ -763,9 +798,9 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td>
-                        {s.rsvp_status === 'yes' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>YES</span>}
-                        {s.rsvp_status === 'no' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>NO</span>}
-                        {!s.rsvp_status && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>PENDING</span>}
+                        {s.rsvp_status === 'yes' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(163,163,163,0.1)', color: '#a3a3a3', border: '1px solid rgba(163,163,163,0.2)' }}>YES</span>}
+                        {s.rsvp_status === 'no' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(89,89,89,0.1)', color: '#595959', border: '1px solid rgba(89,89,89,0.2)' }}>NO</span>}
+                        {!s.rsvp_status && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(128,128,128,0.1)', color: '#808080', border: '1px solid rgba(128,128,128,0.2)' }}>PENDING</span>}
                       </td>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                         {s.seating_category === 'gallery' ? (
@@ -776,13 +811,13 @@ export default function AdminPage() {
                       </td>
                       <td>
                         {s.checked_in ? (
-                          <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                          <span style={{ color: '#a3a3a3', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3' }} />
                             PRESENT
                           </span>
                         ) : (
-                          <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                          <span style={{ color: '#595959', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#595959' }} />
                             ABSENT
                           </span>
                         )}

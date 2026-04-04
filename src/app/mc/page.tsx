@@ -189,15 +189,15 @@ export default function MCPage() {
             {/* Stats */}
             <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', background: '#171717', border: '1px solid #222', padding: '6px 14px', borderRadius: '10px' }}>
               <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6' }} />
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#999999' }} />
                 <span>Total <strong style={{ color: '#e2e2e2' }}>{students.length}</strong></span>
               </span>
               <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px rgba(16,185,129,0.4)' }} />
-                <span>Present <strong style={{ color: '#10b981' }}>{presentCount}</strong></span>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3', boxShadow: '0 0 10px rgba(163,163,163,0.4)' }} />
+                <span>Present <strong style={{ color: '#a3a3a3' }}>{presentCount}</strong></span>
               </span>
               <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' }} />
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#595959' }} />
                 <span>Absent <strong style={{ color: '#e2e2e2' }}>{absentCount}</strong></span>
               </span>
             </div>
@@ -205,12 +205,12 @@ export default function MCPage() {
             {/* Live indicator */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '4px 10px', background: 'rgba(74,222,128,0.05)',
-              border: '1px solid rgba(74,222,128,0.2)', borderRadius: '20px',
+              padding: '4px 10px', background: 'rgba(163,163,163,0.05)',
+              border: '1px solid rgba(163,163,163,0.2)', borderRadius: '20px',
               marginLeft: 'auto'
             }}>
-              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80', letterSpacing: '0.04em' }}>LIVE</span>
+              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a3a3a3' }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#a3a3a3', letterSpacing: '0.04em' }}>LIVE</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -392,7 +392,7 @@ export default function MCPage() {
 
                   <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                     {present ? (
-                      <span style={{ fontSize: '0.68rem', color: '#4ade80', fontWeight: 600, letterSpacing: '0.04em' }}>Present</span>
+                      <span style={{ fontSize: '0.68rem', color: '#a3a3a3', fontWeight: 600, letterSpacing: '0.04em' }}>Present</span>
                     ) : (
                       <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: 600, letterSpacing: '0.04em' }}>Absent</span>
                     )}
@@ -405,10 +405,10 @@ export default function MCPage() {
 
         {/* ── SEATING MAP VIEW ── */}
         {!loading && view === 'seating' && (
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', width: '100%', minWidth: 0 }}>
 
             {/* Map area */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
               {/* Stage */}
               <div style={{
                 textAlign: 'center', marginBottom: '20px',
@@ -424,8 +424,8 @@ export default function MCPage() {
               <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {[
                   { label: 'Empty', bg: '#242424', border: '#3a3a3a', color: '#666' },
-                  { label: 'Absent', bg: '#3d1616', border: '#aa2222', color: '#f87171' },
-                  { label: 'Present', bg: '#0c2e1a', border: '#2d8a4e', color: '#4ade80' },
+                  { label: 'Absent', bg: '#1a1a1a', border: '#3a3a3a', color: '#808080' },
+                  { label: 'Present', bg: '#1a1a1a', border: '#3a3a3a', color: '#a3a3a3' },
                 ].map(({ label, bg, border, color }) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color }}>
                     <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: bg, border: `1px solid ${border}` }} />
@@ -434,11 +434,11 @@ export default function MCPage() {
                 ))}
               </div>
 
-              {/* 2×2 section grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {/* 4 sections horizontal scroll */}
+              <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '12px', width: '100%' }}>
                 {SECTIONS.map((section) => (
                   <div key={section} style={{
-                    background: '#111', border: '1px solid #1e1e1e', minWidth: 0,
+                    background: '#111', border: '1px solid #1e1e1e', minWidth: '380px', flexShrink: 0,
                     borderRadius: '10px', padding: '16px', overflowX: 'auto',
                   }}>
                     <div style={{
@@ -470,31 +470,31 @@ export default function MCPage() {
                             let color = '#333';
 
                             if (present) {
-                              bg = '#10b981';
-                              borderColor = '#10b981';
-                              color = '#062016';
+                              bg = '#a3a3a3';
+                              borderColor = '#a3a3a3';
+                              color = '#1a1a1a';
                             } else if (occupied) {
                               if (student.rsvp_status === 'yes') {
-                                bg = 'rgba(59, 130, 246, 0.05)';
-                                borderColor = 'rgba(59, 130, 246, 0.3)';
-                                color = '#3b82f6';
+                                bg = 'rgba(153, 153, 153, 0.05)';
+                                borderColor = 'rgba(153, 153, 153, 0.3)';
+                                color = '#999999';
                               } else if (student.rsvp_status === 'no') {
-                                bg = 'rgba(244, 63, 94, 0.05)';
-                                borderColor = 'rgba(244, 63, 94, 0.3)';
-                                color = '#f43f5e';
+                                bg = 'rgba(89, 89, 89, 0.05)';
+                                borderColor = 'rgba(89, 89, 89, 0.3)';
+                                color = '#595959';
                               } else {
-                                bg = 'rgba(245, 158, 11, 0.05)';
-                                borderColor = 'rgba(245, 158, 11, 0.3)';
-                                color = '#f59e0b';
+                                bg = 'rgba(128, 128, 128, 0.05)';
+                                borderColor = 'rgba(128, 128, 128, 0.3)';
+                                color = '#808080';
                               }
                             }
 
                             if (isSelected) {
                               borderColor = '#fff';
-                              color = present ? '#062016' : '#fff';
+                              color = present ? '#1a1a1a' : '#fff';
                             } else if (isSearchMatch) {
-                              borderColor = '#6366f1';
-                              bg = 'rgba(99, 102, 241, 0.15)';
+                              borderColor = '#999999';
+                              bg = 'rgba(153, 153, 153, 0.15)';
                             }
 
                             return (
@@ -516,7 +516,7 @@ export default function MCPage() {
                                   transition: 'all 0.1s',
                                   boxShadow: isSelected
                                     ? '0 0 0 2px rgba(255,255,255,0.15)'
-                                    : present ? '0 0 12px rgba(16, 185, 129, 0.4)' : isSearchMatch ? '0 0 12px #6366f1' : 'none',
+                                    : present ? '0 0 12px rgba(163, 163, 163, 0.4)' : isSearchMatch ? '0 0 12px #999999' : 'none',
                                   transform: isSelected ? 'scale(1.15)' : isSearchMatch ? 'scale(1.1)' : 'scale(1)',
                                   position: 'relative',
                                   zIndex: isSelected ? 10 : isSearchMatch ? 5 : 'auto',
@@ -558,7 +558,7 @@ export default function MCPage() {
               {selectedSeat && (
                 (() => {
                   const s = selectedSeat;
-                  const accentColor = s.checked_in ? '#4ade80' : '#f87171';
+                  const accentColor = s.checked_in ? '#a3a3a3' : '#808080';
                   return (
                     <div style={{ padding: '18px' }}>
                       {/* Status bar */}
