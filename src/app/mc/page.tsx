@@ -8,7 +8,9 @@ interface Student {
   register_no: string;
   student_name: string;
   school: string;
+  program: string;
   branch: string;
+  batch: string;
   awards: { type: string; details: string }[];
   checked_in: boolean;
   seat?: { section: string; row: string; column: number; type: string };
@@ -21,6 +23,34 @@ function getSeatLabel(s: Student): string {
   if (s.seating_category === 'gallery') return 'Gallery';
   if (s.seat?.section) return `${s.seat.section}-${s.seat.row}${s.seat.column}`;
   return '—';
+}
+
+function getProgramBranch(student: Student): string {
+  return [student.program, student.branch].filter(Boolean).join(' / ') || '—';
+}
+
+function getSeatSortValue(student: Student): [number, number, number] {
+  if (!student.seat?.section || !student.seat?.row || !student.seat?.column) {
+    return [999, 999, 999];
+  }
+
+  const sectionMatch = String(student.seat.section).match(/\d+/);
+  const sectionIndex = sectionMatch ? Number(sectionMatch[0]) : 999;
+  const row = String(student.seat.row).toUpperCase();
+  const column = Number(student.seat.column) || 999;
+  const rowOrder = ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'A'];
+  const rowIndex = rowOrder.indexOf(row);
+
+  return [sectionIndex, rowIndex === -1 ? 999 : rowIndex, column];
+}
+
+function getRankText(student: Student): string {
+  const meritAward = student.awards.find((award) => award.type.toLowerCase() === 'merit');
+  return meritAward?.details || student.awards[0]?.details || '—';
+}
+
+function getAwardText(student: Student): string {
+  return student.awards.map((award) => award.type).join(', ') || '—';
 }
 
 const ROWS = 'ABCDEFGHIJKLMNO'.split('');
@@ -64,7 +94,7 @@ export default function MCPage() {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ sort: 'upload_order', limit: '0' });
+      const params = new URLSearchParams({ sort: 'upload_order', limit: '0', category: 'ground' });
       if (filter === 'checked_in') params.set('checked_in', 'true');
       if (filter === 'absent') params.set('checked_in', 'false');
       const res = await fetch(`/api/users?${params}`);
@@ -115,11 +145,21 @@ export default function MCPage() {
     router.push('/login');
   };
 
-  const displayedStudents = students.filter((s) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return s.student_name.toLowerCase().includes(q) || s.register_no.toLowerCase().includes(q);
-  });
+  const displayedStudents = [...students]
+    .filter((s) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return s.student_name.toLowerCase().includes(q) || s.register_no.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      const [aSection, aRow, aCol] = getSeatSortValue(a);
+      const [bSection, bRow, bCol] = getSeatSortValue(b);
+
+      if (aSection !== bSection) return aSection - bSection;
+      if (aRow !== bRow) return aRow - bRow;
+      if (aCol !== bCol) return aCol - bCol;
+      return a.upload_order - b.upload_order;
+    });
 
   const seatMap = new Map<string, Student>();
   seatStudents.forEach((s) => {
@@ -276,19 +316,19 @@ export default function MCPage() {
             {displayedStudents.length > 0 && (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '44px 1fr 120px auto 80px',
+                gridTemplateColumns: 'minmax(170px, 1.05fr) minmax(220px, 1.25fr) 90px minmax(260px, 1.5fr) 70px 140px 140px 120px 100px',
                 gap: '0 16px',
                 padding: '6px 12px',
                 borderBottom: '1px solid #1e1e1e',
                 marginBottom: '4px',
               }}>
-                {['#', 'Name', 'Awards', 'Seat', ''].map((h) => (
+                {['School', 'Program / Branch', 'Batch', 'Name', '', 'Award', 'Rank', 'Seating Order', 'Attendance'].map((h) => (
                   <span key={h} style={{ fontSize: '0.68rem', fontWeight: 600, color: '#444', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
                 ))}
               </div>
             )}
 
-            {displayedStudents.map((s, idx) => {
+            {displayedStudents.map((s) => {
               const present = s.checked_in;
               const multi = s.awards.length > 1;
               return (
@@ -296,7 +336,7 @@ export default function MCPage() {
                   key={s._id}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '44px 1fr 120px auto 80px',
+                    gridTemplateColumns: 'minmax(170px, 1.05fr) minmax(220px, 1.25fr) 90px minmax(260px, 1.5fr) 70px 140px 140px 120px 100px',
                     gap: '0 16px',
                     alignItems: 'center',
                     padding: '10px 12px',
@@ -308,12 +348,18 @@ export default function MCPage() {
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#141414'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  {/* # */}
-                  <span style={{ fontSize: '0.75rem', color: '#3a3a3a', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    {s.upload_order || idx + 1}
+                  <span style={{ fontSize: '0.82rem', color: present ? '#d4d4d4' : '#8a8a8a' }}>
+                    {s.school || '—'}
                   </span>
 
-                  {/* Name + meta */}
+                  <div style={{ fontSize: '0.82rem', color: present ? '#d4d4d4' : '#8a8a8a' }}>
+                    {getProgramBranch(s)}
+                  </div>
+
+                  <div style={{ fontSize: '0.82rem', color: present ? '#d4d4d4' : '#8a8a8a' }}>
+                    {s.batch || '—'}
+                  </div>
+
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontWeight: 600, fontSize: '0.9rem', color: present ? '#fff' : '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -326,37 +372,29 @@ export default function MCPage() {
                       )}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#444', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.register_no} · {s.school} · {s.branch}
+                      {s.register_no}
                     </div>
                   </div>
 
-                  {/* Awards */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                    {s.awards.map((a, i) => (
-                      <span key={i} style={{
-                        fontSize: '0.62rem', color: '#666',
-                        border: '1px solid #222', borderRadius: '4px',
-                        padding: '1px 6px', whiteSpace: 'nowrap',
-                      }}>
-                        {a.type}
-                      </span>
-                    ))}
+                  <div />
+
+                  <div style={{ fontSize: '0.78rem', color: present ? '#d4d4d4' : '#8a8a8a', textTransform: 'capitalize' }}>
+                    {getAwardText(s)}
                   </div>
 
-                  {/* Seat */}
-                  <span style={{
-                    fontFamily: 'monospace', fontSize: '0.78rem',
-                    color: '#555', whiteSpace: 'nowrap',
-                  }}>
-                    {getSeatLabel(s)}
-                  </span>
+                  <div style={{ fontSize: '0.8rem', color: present ? '#f4f4f5' : '#a3a3a3', fontWeight: 600 }}>
+                    {getRankText(s)}
+                  </div>
 
-                  {/* Status */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: present ? '#d4d4d4' : '#8a8a8a', whiteSpace: 'nowrap' }}>
+                    {getSeatLabel(s)}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                     {present ? (
                       <span style={{ fontSize: '0.68rem', color: '#4ade80', fontWeight: 600, letterSpacing: '0.04em' }}>Present</span>
                     ) : (
-                      <span style={{ fontSize: '0.68rem', color: '#333', fontWeight: 500 }}>—</span>
+                      <span style={{ fontSize: '0.68rem', color: '#f87171', fontWeight: 600, letterSpacing: '0.04em' }}>Absent</span>
                     )}
                   </div>
                 </div>

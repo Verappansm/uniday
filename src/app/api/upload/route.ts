@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { randomBytes } from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { assignGroundSeats } from '@/lib/seating';
+import { assignGroundSeats, assignClubSeats } from '@/lib/seating';
 
 interface ExcelRow {
   school?: string;
@@ -71,6 +71,7 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   reg_no: 'register_no',
   reg_number: 'register_no',
   registerno: 'register_no',
+  registration: 'register_no',
   student_name: 'student_name',
   name: 'student_name',
   student: 'student_name',
@@ -87,9 +88,11 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   mobile_number: 'phone_number',
   award_type: 'award_type',
   award: 'award_type',
+  position: 'award_type',
   award_details: 'award_details',
   award_detail: 'award_details',
   award_name: 'award_details',
+  club_name: 'award_details',
   rank: 'rank',
 };
 
@@ -162,29 +165,29 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        const derivedAwardType = row.award_type || (row.rank ? 'merit' : '');
-        const derivedAwardDetails =
-          row.award_details || (row.rank ? `Rank ${String(row.rank).trim()}` : '');
+          const derivedAwardType = row.award_type || (row.rank ? 'merit' : uploadType === 'clubs' ? 'club' : '');
+          const derivedAwardDetails =
+            row.award_details || (row.rank ? `Rank ${String(row.rank).trim()}` : uploadType === 'clubs' ? 'club' : '');
 
-        const student: ImportedStudent = {
-          register_no: regNo,
-          student_name: studentName,
-          email: (row.email || '').trim(),
-          phone: (row.phone_number || '').trim() || undefined,
-          school: (row.school || '').trim(),
-          program: (row.program || '').trim(),
-          branch: (row.branch || '').trim(),
-          batch: (row.batch || '').trim(),
-          program_code: (row.program_code || '').trim(),
-          awards:
-            derivedAwardType && derivedAwardDetails
+          const student: ImportedStudent = {
+            register_no: regNo,
+            student_name: studentName,
+            email: (row.email || '').trim(),
+            phone: (row.phone_number || '').trim() || undefined,
+            school: (row.school || '').trim(),
+            program: (row.program || '').trim(),
+            branch: (row.branch || '').trim(),
+            batch: (row.batch || '').trim(),
+            program_code: (row.program_code || '').trim(),
+            awards:
+              derivedAwardType || derivedAwardDetails
               ? [{ type: derivedAwardType.trim(), details: derivedAwardDetails.trim() }]
               : [],
           rsvp_status: null,
           qr_code: randomBytes(16).toString('hex'),
           checked_in: false,
           upload_order: uploadOrderCounter++,
-          seating_category: uploadType === 'gallery' ? 'gallery' : 'ground',
+          seating_category: uploadType === 'gallery' ? 'gallery' : uploadType === 'clubs' ? 'ground' : 'ground',
           seat: uploadType === 'gallery'
             ? { type: 'Gallery' as const }
             : { type: 'Ground' as const },
@@ -196,14 +199,46 @@ export async function POST(request: NextRequest) {
     }
 
     const studentsArray: ImportedStudent[] = Array.from(studentMap.values());
+    let bulkArray = studentsArray;
 
     // Seats are assigned fully by backend rules using upload order and award types.
-    if (uploadType === 'ground') {
-      assignGroundSeats(studentsArray);
+    if (uploadType === 'ground' || uploadType === 'clubs') {
+      const existingUsers = await User.find({
+        seating_category: 'ground',
+        register_no: { $nin: studentsArray.map((s) => s.register_no) },
+      }).lean();
+
+      const combined = [
+        ...existingUsers.map((u: any) => ({
+          register_no: u.register_no,
+          student_name: u.student_name,
+          email: u.email,
+          phone: u.phone,
+          school: u.school,
+          program: u.program,
+          branch: u.branch,
+          batch: u.batch,
+          program_code: u.program_code,
+          awards: u.awards || [],
+          rsvp_status: u.rsvp_status,
+          qr_code: u.qr_code,
+          checked_in: u.checked_in,
+          upload_order: u.upload_order,
+          seating_category: 'ground' as const,
+          seat: u.seat || { type: 'Ground' },
+          email_status: u.email_status,
+          seating_raw: u.seating_raw || '',
+        })),
+        ...studentsArray,
+      ];
+
+      combined.sort((a, b) => a.upload_order - b.upload_order);
+      assignGroundSeats(combined);
+      bulkArray = combined;
     }
 
     // Upsert into MongoDB
-    const bulkOps = studentsArray.map((student) => ({
+    const bulkOps = bulkArray.map((student) => ({
       updateOne: {
         filter: { register_no: student.register_no },
         update: { $set: student },
