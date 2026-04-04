@@ -31,7 +31,7 @@ export default function RSVPPage({ params }: { params: Promise<{ token: string }
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-        const res = await fetch(`/api/rsvp?token=${token}`);
+        const res = await fetch(`/api/rsvp?token=${token}`, { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || 'Student not found');
@@ -41,6 +41,7 @@ export default function RSVPPage({ params }: { params: Promise<{ token: string }
         if (data.student.rsvp_status) {
           setSubmitted(true);
           setRsvpChoice(data.student.rsvp_status);
+          setReason(data.student.rsvp_reason || '');
         }
       } catch {
         setError('Failed to load student data');
@@ -68,6 +69,8 @@ export default function RSVPPage({ params }: { params: Promise<{ token: string }
       if (res.ok) {
         setStudent(data.student);
         setSubmitted(true);
+        setRsvpChoice(data.student.rsvp_status || rsvpChoice);
+        setReason(data.student.rsvp_reason || '');
       } else {
         setError(data.error);
       }

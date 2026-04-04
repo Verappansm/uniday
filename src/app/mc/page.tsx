@@ -49,7 +49,7 @@ export default function MCPage() {
       try {
         const res = await fetch('/api/auth/me');
         const data = await res.json();
-        if (!res.ok || data.role !== 'mc') {
+        if (!res.ok || (data.role !== 'mc' && data.role !== 'admin')) {
           router.push('/login');
           return;
         }
@@ -147,13 +147,32 @@ export default function MCPage() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem' }}>
-              <span style={{ color: '#555' }}>Total <strong style={{ color: '#e2e2e2' }}>{students.length}</strong></span>
-              <span style={{ color: '#555' }}>Present <strong style={{ color: '#4ade80' }}>{presentCount}</strong></span>
-              <span style={{ color: '#555' }}>Absent <strong style={{ color: '#d31212ff' }}>{absentCount}</strong></span>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', background: '#171717', border: '1px solid #222', padding: '6px 14px', borderRadius: '10px' }}>
+              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6' }} />
+                <span>Total <strong style={{ color: '#e2e2e2' }}>{students.length}</strong></span>
+              </span>
+              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px rgba(16,185,129,0.4)' }} />
+                <span>Present <strong style={{ color: '#10b981' }}>{presentCount}</strong></span>
+              </span>
+              <span style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' }} />
+                <span>Absent <strong style={{ color: '#e2e2e2' }}>{absentCount}</strong></span>
+              </span>
             </div>
 
-            {/* Live + logout */}
+            {/* Live indicator */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '4px 10px', background: 'rgba(74,222,128,0.05)',
+              border: '1px solid rgba(74,222,128,0.2)', borderRadius: '20px',
+              marginLeft: 'auto'
+            }}>
+              <span className="pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#4ade80', letterSpacing: '0.04em' }}>LIVE</span>
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={handleLogout}
@@ -193,8 +212,7 @@ export default function MCPage() {
             </div>
 
             {/* Search */}
-            {view === 'list' && (
-              <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }}>
                 <input
                   ref={searchRef}
                   value={search}
@@ -212,7 +230,6 @@ export default function MCPage() {
                 />
                 <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#444', fontSize: '0.8rem' }}>⌕</span>
               </div>
-            )}
 
             {/* View toggle */}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', background: '#171717', border: '1px solid #222', borderRadius: '8px', padding: '3px' }}>
@@ -394,7 +411,7 @@ export default function MCPage() {
                       {section}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
-                      {[...ROWS].reverse().map((row) => (
+                      {ROWS.map((row) => (
                         <div key={row} style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                           <span style={{ width: '20px', textAlign: 'center', fontSize: '0.65rem', color: '#3a3a3a', fontWeight: 600, flexShrink: 0 }}>
                             {row}
@@ -405,12 +422,42 @@ export default function MCPage() {
                             const present = student?.checked_in ?? false;
                             const occupied = !!student;
                             const isSelected = selectedSeat?._id === student?._id && !!student;
+                            const isSearchMatch = search.trim().length > 0 && !!student && (
+                              student.student_name.toLowerCase().includes(search.toLowerCase()) ||
+                              student.register_no.toLowerCase().includes(search.toLowerCase())
+                            );
 
-                            const bg = present ? '#0c2e1a' : occupied ? '#3d1616' : '#242424';
-                            const borderColor = isSelected
-                              ? '#fff'
-                              : present ? '#2d8a4e' : occupied ? '#aa2222' : '#3a3a3a';
-                            const color = present ? '#4ade80' : occupied ? '#f87171' : '#555';
+                            let bg = '#171717';
+                            let borderColor = '#222';
+                            let color = '#333';
+
+                            if (present) {
+                              bg = '#10b981';
+                              borderColor = '#10b981';
+                              color = '#062016';
+                            } else if (occupied) {
+                              if (student.rsvp_status === 'yes') {
+                                bg = 'rgba(59, 130, 246, 0.05)';
+                                borderColor = 'rgba(59, 130, 246, 0.3)';
+                                color = '#3b82f6';
+                              } else if (student.rsvp_status === 'no') {
+                                bg = 'rgba(244, 63, 94, 0.05)';
+                                borderColor = 'rgba(244, 63, 94, 0.3)';
+                                color = '#f43f5e';
+                              } else {
+                                bg = 'rgba(245, 158, 11, 0.05)';
+                                borderColor = 'rgba(245, 158, 11, 0.3)';
+                                color = '#f59e0b';
+                              }
+                            }
+
+                            if (isSelected) {
+                              borderColor = '#fff';
+                              color = present ? '#062016' : '#fff';
+                            } else if (isSearchMatch) {
+                              borderColor = '#6366f1';
+                              bg = 'rgba(99, 102, 241, 0.15)';
+                            }
 
                             return (
                               <div
@@ -429,10 +476,12 @@ export default function MCPage() {
                                   fontSize: '0.65rem', fontWeight: 700,
                                   cursor: occupied ? 'pointer' : 'default',
                                   transition: 'all 0.1s',
-                                  boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.15)' : 'none',
-                                  transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                                  boxShadow: isSelected
+                                    ? '0 0 0 2px rgba(255,255,255,0.15)'
+                                    : present ? '0 0 12px rgba(16, 185, 129, 0.4)' : isSearchMatch ? '0 0 12px #6366f1' : 'none',
+                                  transform: isSelected ? 'scale(1.15)' : isSearchMatch ? 'scale(1.1)' : 'scale(1)',
                                   position: 'relative',
-                                  zIndex: isSelected ? 5 : 'auto',
+                                  zIndex: isSelected ? 10 : isSearchMatch ? 5 : 'auto',
                                 }}
                               >
                                 {col}
@@ -492,9 +541,11 @@ export default function MCPage() {
                             onClick={() => setSelectedSeat(null)}
                             style={{
                               marginLeft: 'auto', background: 'none', border: 'none',
-                              color: '#333', cursor: 'pointer', fontSize: '0.9rem',
-                              lineHeight: 1, padding: '0 4px',
+                              color: '#666', cursor: 'pointer', fontSize: '1.2rem',
+                              lineHeight: 1, padding: '0 8px', transition: 'color 0.1s',
                             }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#eee')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#666')}
                             title="Deselect"
                           >×</button>
                         )}

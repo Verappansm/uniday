@@ -1,8 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { QRCodeSVG } from 'qrcode.react';
 
 interface Student {
   _id?: string;
@@ -41,12 +40,14 @@ interface QRCodeScanResult {
   rawValue?: string;
 }
 
-interface QRCodeDetectorLike {
-  detect(source: HTMLCanvasElement): Promise<QRCodeScanResult[]>;
+interface DetailedQRScanResult extends QRCodeScanResult {
+  data?: string;
 }
 
-interface QRCodeDetectorConstructor {
-  new (options: { formats: string[] }): QRCodeDetectorLike;
+interface QrScannerInstance {
+  start(): Promise<void>;
+  stop(): void;
+  destroy(): void;
 }
 
 const seatToneMap: Record<SeatMap['rows'][number]['seats'][number]['state'], string> = {
@@ -61,12 +62,6 @@ function seatLabel(student: Student) {
   if (student.seating_category === 'gallery') return 'Gallery';
   if (student.seat?.section) return `${student.seat.section}-${student.seat.row}${student.seat.column}`;
   return 'N/A';
-}
-
-function statusBadgeClasses(status: CheckInResult['status']) {
-  return status === 'success'
-    ? 'badge badge-success'
-    : 'badge badge-warning';
 }
 
 const styles = {
@@ -211,6 +206,44 @@ const styles = {
     border: '1px solid var(--border-subtle)',
     background: '#000',
     objectFit: 'cover' as const,
+  } as const,
+  videoFrame: {
+    position: 'relative' as const,
+  } as const,
+  scanBox: {
+    position: 'absolute' as const,
+    top: '50%',
+    left: '50%',
+    width: '58%',
+    aspectRatio: '1 / 1',
+    transform: 'translate(-50%, -50%)',
+    border: '3px solid rgba(96, 165, 250, 0.95)',
+    borderRadius: '24px',
+    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(255,255,255,0.12) inset, 0 0 28px rgba(96, 165, 250, 0.28)',
+    pointerEvents: 'none' as const,
+  } as const,
+  scanBoxCorner: {
+    position: 'absolute' as const,
+    width: '20px',
+    height: '20px',
+    borderColor: '#ffffff',
+    pointerEvents: 'none' as const,
+  } as const,
+  scanHint: {
+    position: 'absolute' as const,
+    left: '50%',
+    bottom: '14px',
+    transform: 'translateX(-50%)',
+    padding: '8px 12px',
+    borderRadius: '999px',
+    background: 'rgba(5, 10, 22, 0.78)',
+    border: '1px solid rgba(96, 165, 250, 0.35)',
+    color: '#dbeafe',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    letterSpacing: '0.01em',
+    whiteSpace: 'nowrap' as const,
+    pointerEvents: 'none' as const,
   } as const,
   videoFooter: {
     marginTop: '12px',
@@ -374,9 +407,7 @@ export default function VolunteerPage() {
   const [checkingIn, setCheckingIn] = useState(false);
   const [scanning, setScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scannerRef = useRef<QrScannerInstance | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -384,7 +415,7 @@ export default function VolunteerPage() {
       try {
         const res = await fetch('/api/auth/me');
         const data = await res.json();
-        if (!res.ok || data.role !== 'volunteer') {
+        if (!res.ok || (data.role !== 'volunteer' && data.role !== 'admin')) {
           router.push('/login');
           return;
         }
@@ -397,20 +428,17 @@ export default function VolunteerPage() {
     verifyRole();
   }, [router]);
 
+
   const resetFeedback = () => {
     setError('');
     setResult(null);
   };
 
   const stopScanner = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
+    if (scannerRef.current) {
+      scannerRef.current.stop();
+      scannerRef.current.destroy();
+      scannerRef.current = null;
     }
 
     setScanning(false);
@@ -450,6 +478,11 @@ export default function VolunteerPage() {
     resetFeedback();
 
     try {
+      if (!videoRef.current) {
+        setError('Scanner video element is not ready. Refresh and try again.');
+        return;
+      }
+
       if (
         typeof navigator === 'undefined' ||
         !navigator.mediaDevices ||
@@ -460,56 +493,48 @@ export default function VolunteerPage() {
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+      stopScanner();
+
+      const { default: QrScanner } = await import('qr-scanner');
+      const scanner = new QrScanner(videoRef.current, (result: DetailedQRScanResult | string) => {
+        const value =
+          typeof result === 'string'
+            ? result
+            : result.data || result.rawValue || '';
+
+        if (value) {
+          stopScanner();
+          void handleCheckin(value);
+        }
+      }, {
+        preferredCamera: 'environment',
+        maxScansPerSecond: 25,
+        returnDetailedScanResult: true,
+        calculateScanRegion: (video) => {
+          const size = Math.round(Math.min(video.videoWidth, video.videoHeight) * 0.58);
+          return {
+            x: Math.round((video.videoWidth - size) / 2),
+            y: Math.round((video.videoHeight - size) / 2),
+            width: size,
+            height: size,
+            downScaledWidth: 320,
+            downScaledHeight: 320,
+          };
+        },
+        onDecodeError: () => {
+          // Ignore frame-level decode misses while scanning.
+        },
       });
+      scannerRef.current = scanner;
 
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
+      await scanner.start();
       setScanning(true);
-
-      const qrWindow = window as Window & typeof globalThis & {
-        BarcodeDetector?: QRCodeDetectorConstructor;
-      };
-
-      if (qrWindow.BarcodeDetector) {
-        const detector = new qrWindow.BarcodeDetector({ formats: ['qr_code'] });
-        scanIntervalRef.current = setInterval(async () => {
-          if (!videoRef.current || !canvasRef.current) return;
-
-          const canvas = canvasRef.current;
-          const context = canvas.getContext('2d');
-          if (!context) return;
-
-          canvas.width = videoRef.current.videoWidth;
-          canvas.height = videoRef.current.videoHeight;
-          context.drawImage(videoRef.current, 0, 0);
-
-          try {
-            const qrCodes = await detector.detect(canvas);
-            const value = qrCodes[0]?.rawValue;
-
-            if (value) {
-              stopScanner();
-              handleCheckin(value);
-            }
-          } catch {
-            // Keep scanning.
-          }
-        }, 500);
-      } else {
-        setError('QR scanning is not supported on this browser. Use manual token or search.');
-      }
     } catch (err) {
       console.error('Camera error:', err);
+      stopScanner();
       setError(
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-          <span>Unable to access camera. Please allow camera permissions and use HTTPS/localhost, or switch to manual search.</span>
+          <span>Unable to start QR scanning. Please allow camera permissions, use HTTPS/localhost, or switch to manual search.</span>
           <button 
             onClick={() => { setMode('search'); setError(''); }}
             className="btn-primary"
@@ -569,9 +594,11 @@ export default function VolunteerPage() {
                 <p style={styles.eyebrow}>
                   Event Day Check-In
                 </p>
-                <h1 style={{ ...styles.title, color: '#fff' }}>
-                   Volunteer Dashboard
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <h1 style={{ ...styles.title, color: '#fff', margin: 0 }}>
+                    Volunteer Dashboard
+                  </h1>
+                </div>
                 <p style={styles.subtitle}>
                   Scan the QR, search a student manually, and verify seat details before directing them.
                 </p>
@@ -665,17 +692,25 @@ export default function VolunteerPage() {
               </div>
 
               <div style={{ display: scanning ? 'block' : 'none' }}>
-                <video
-                  ref={videoRef}
-                  style={styles.video}
-                  playsInline
-                  autoPlay
-                  muted
-                />
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div style={styles.videoFrame}>
+                  <video
+                    ref={videoRef}
+                    style={styles.video}
+                    playsInline
+                    autoPlay
+                    muted
+                  />
+                  <div style={styles.scanBox}>
+                    <div style={{ ...styles.scanBoxCorner, top: '-3px', left: '-3px', borderTopWidth: '4px', borderLeftWidth: '4px', borderTopStyle: 'solid', borderLeftStyle: 'solid', borderTopLeftRadius: '18px' }} />
+                    <div style={{ ...styles.scanBoxCorner, top: '-3px', right: '-3px', borderTopWidth: '4px', borderRightWidth: '4px', borderTopStyle: 'solid', borderRightStyle: 'solid', borderTopRightRadius: '18px' }} />
+                    <div style={{ ...styles.scanBoxCorner, bottom: '-3px', left: '-3px', borderBottomWidth: '4px', borderLeftWidth: '4px', borderBottomStyle: 'solid', borderLeftStyle: 'solid', borderBottomLeftRadius: '18px' }} />
+                    <div style={{ ...styles.scanBoxCorner, bottom: '-3px', right: '-3px', borderBottomWidth: '4px', borderRightWidth: '4px', borderBottomStyle: 'solid', borderRightStyle: 'solid', borderBottomRightRadius: '18px' }} />
+                  </div>
+                  <div style={styles.scanHint}>Align the QR inside the box</div>
+                </div>
                 <div style={styles.videoFooter}>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Scanning continuously every 0.5 seconds.
+                    Hold the QR steady inside the camera view for a second.
                   </p>
                   <button
                     onClick={stopScanner}
@@ -815,8 +850,15 @@ export default function VolunteerPage() {
             <div style={styles.resultTop}>
               <div style={styles.resultTopRow}>
                 <div>
-                  <div className={statusBadgeClasses(result.status)}>
-                    {result.status === 'success' ? 'Checked in' : 'Already checked in'}
+                  <div style={{
+                    padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 800,
+                    textTransform: 'uppercase', letterSpacing: '0.08em', display: 'inline-block',
+                    marginBottom: '8px',
+                    background: result.status === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                    color: result.status === 'success' ? '#10b981' : '#f59e0b',
+                    border: `1px solid ${result.status === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                  }}>
+                    {result.status === 'success' ? '✓ Check-in Successful' : '⚠ Already Checked In'}
                   </div>
                   <h2 style={styles.resultTitle}>
                     {result.student.student_name}
@@ -825,11 +867,31 @@ export default function VolunteerPage() {
                     {result.student.register_no} · {result.student.school} · {result.student.branch || result.student.program}
                   </p>
                 </div>
-                <div style={styles.seatTile}>
-                  <p style={styles.seatTileLabel}>
-                    Seat
+                <div style={{
+                  background: 'var(--bg-card-highlight)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  textAlign: 'center',
+                  minWidth: '100px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                }}>
+                  <p style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    marginBottom: '4px',
+                  }}>
+                    Assigned Seat
                   </p>
-                  <p style={styles.seatTileValue}>
+                  <p style={{
+                    fontSize: '1.4rem',
+                    fontWeight: 900,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'monospace',
+                  }}>
                     {seatLabel(result.student)}
                   </p>
                 </div>
@@ -843,40 +905,17 @@ export default function VolunteerPage() {
                     Awards
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {result.student.awards.map((award, index) => (
-                      <span key={`${award.type}-${award.details}-${index}`} className="badge badge-accent">
-                        {award.type}: {award.details}
+                    {result.student.awards.map((a, i) => (
+                      <span key={`${a.type}-${i}`} style={{
+                        padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 600,
+                        background: a.type === 'merit' ? 'rgba(251,191,36,0.1)' : 'rgba(99,102,241,0.1)',
+                        color: a.type === 'merit' ? '#fbbf24' : '#818cf8',
+                        border: `1px solid ${a.type === 'merit' ? 'rgba(251,191,36,0.2)' : 'rgba(99,102,241,0.2)'}`,
+                        textTransform: 'uppercase', letterSpacing: '0.04em'
+                      }}>
+                        {a.type}: {a.details}
                       </span>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {result.student.qr_code && (
-                <div>
-                  <p style={styles.label}>QR Code</p>
-                  <div style={{
-                    borderRadius: '18px',
-                    border: '1px solid var(--border-subtle)',
-                    background: 'rgba(255,255,255,0.03)',
-                    padding: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <div style={{
-                      background: '#fff',
-                      padding: '12px',
-                      borderRadius: '14px',
-                    }}>
-                      <QRCodeSVG
-                        value={result.student.qr_code}
-                        size={132}
-                        bgColor="#ffffff"
-                        fgColor="#111827"
-                        includeMargin
-                      />
-                    </div>
                   </div>
                 </div>
               )}
@@ -909,11 +948,13 @@ export default function VolunteerPage() {
                             {row.seats.map((seat) => (
                               <div
                                 key={seat.key}
-                                className={
-                                  seat.student?.register_no === result.student.register_no
-                                    ? 'seat-cell seat-rsvp-yes'
-                                    : seatToneMap[seat.state]
-                                }
+                                className={seat.student?.register_no === result.student.register_no ? 'seat-cell' : seatToneMap[seat.state]}
+                                style={seat.student?.register_no === result.student.register_no ? {
+                                  background: 'rgba(96, 165, 250, 0.2)',
+                                  border: '2px solid var(--info)',
+                                  color: 'var(--info)',
+                                  boxShadow: '0 0 0 2px rgba(96, 165, 250, 0.12)',
+                                } : undefined}
                                 title={seat.key}
                               >
                                 {seat.column}
