@@ -94,7 +94,7 @@ export default function MCPage() {
 
   const fetchStudents = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ sort: 'upload_order', limit: '0', category: 'ground' });
+      const params = new URLSearchParams({ sort: 'seating', limit: '0', category: 'ground' });
       if (filter === 'checked_in') params.set('checked_in', 'true');
       if (filter === 'absent') params.set('checked_in', 'false');
       const res = await fetch(`/api/users?${params}`);
@@ -150,15 +150,6 @@ export default function MCPage() {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return s.student_name.toLowerCase().includes(q) || s.register_no.toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      const [aSection, aRow, aCol] = getSeatSortValue(a);
-      const [bSection, bRow, bCol] = getSeatSortValue(b);
-
-      if (aSection !== bSection) return aSection - bSection;
-      if (aRow !== bRow) return aRow - bRow;
-      if (aCol !== bCol) return aCol - bCol;
-      return a.upload_order - b.upload_order;
     });
 
   const seatMap = new Map<string, Student>();
