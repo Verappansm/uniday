@@ -171,8 +171,6 @@ export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[]
   const bogsStudents: T[] = [];
   const clubStudents: T[] = [];
   const attendanceStudents: T[] = [];
-  const bestSportsStudents: T[] = [];
-  const serviceStudents: T[] = [];
   const regularStudents: T[] = [];
 
   students.forEach((student) => {
@@ -191,16 +189,6 @@ export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[]
       return;
     }
 
-    if (hasKeyword(student, ['best sports athlete', 'sports athlete', 'athlete'])) {
-      bestSportsStudents.push(student);
-      return;
-    }
-
-    if (hasKeyword(student, ['nss', 'ncc'])) {
-      serviceStudents.push(student);
-      return;
-    }
-
     regularStudents.push(student);
   });
 
@@ -215,17 +203,43 @@ export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[]
   assignSequential(regularStudents, regularPrimary);
 
   const attendancePrimary = takeSeats(regularFlow, 35);
-  const sportsPrimary = takeSeats(regularFlow, 2);
-  const servicePrimary = takeSeats(regularFlow, 30);
-
   const tailOverflow = [...regularFlow];
 
   assignSequential(attendanceStudents, attendancePrimary, tailOverflow);
-  assignSequential(bestSportsStudents, sportsPrimary, tailOverflow);
-  assignSequential(serviceStudents, servicePrimary, tailOverflow);
 
   const remainingRows = [...ROWS];
   const clubGroups = orderedClubRows(clubStudents);
+
+  let nextClubRowIndex = 0;
+  clubGroups.forEach(({ students: groupStudents }) => {
+    let rowIndex = nextClubRowIndex;
+    let columnIndex = 0;
+
+    groupStudents.forEach((student) => {
+      while (rowIndex < remainingRows.length) {
+        const row = remainingRows[rowIndex];
+        const column = COLS[columnIndex];
+
+        assignSeat(student, 'S4', row, column);
+        columnIndex += 1;
+
+        if (columnIndex >= COLS.length) {
+          columnIndex = 0;
+          rowIndex += 1;
+        }
+        return;
+      }
+    });
+
+    nextClubRowIndex = rowIndex + (columnIndex > 0 ? 1 : 0);
+  });
+
+  return students;
+}
+
+export function assignClubSeats<T extends StudentSeatLike>(students: T[]): T[] {
+  const clubGroups = orderedClubRows(students);
+  const remainingRows = [...ROWS];
 
   let nextClubRowIndex = 0;
   clubGroups.forEach(({ students: groupStudents }) => {
