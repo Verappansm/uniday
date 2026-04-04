@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     const { searchParams } = new URL(request.url);
 
-    const filter: any = {};
+    const filter: Record<string, unknown> & {
+      $or?: Array<Record<string, unknown>>;
+    } = {};
 
     const awardType = searchParams.get('award_type');
     if (awardType) filter['awards.type'] = { $regex: awardType, $options: 'i' };
@@ -46,7 +48,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({ users, total, page, pages: limit === 0 ? 1 : Math.ceil(total / limit) });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to load users' },
+      { status: 500 }
+    );
   }
 }

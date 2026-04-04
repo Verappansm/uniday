@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { randomBytes } from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
+import { assignGroundSeats } from '@/lib/seating';
 
 interface ExcelRow {
   school?: string;
@@ -17,130 +18,94 @@ interface ExcelRow {
   award_type?: string;
   award_details?: string;
   seating?: string;
+  rank?: string;
 }
 
-// Seating assignment for ground floor
-function assignGroundSeats(students: any[]) {
-  const sections = ['S1', 'S2', 'S3', 'S4'];
-  const rows = 'ABCDEFGHIJKLMNO'.split('');
-  const cols = Array.from({ length: 10 }, (_, i) => i + 1);
+type RawExcelRow = Record<string, unknown>;
 
-  // Club types for S4
-  const clubTypes = [
-    'best arts and cultural',
-    'best literary club',
-    'best social and outreach club',
-    'best tech club',
-    'best health and wellness club',
-    'best recreational club',
-    'best chapter',
-    'elite club award 1',
-    'elite club award 2',
-  ];
+interface ImportedStudent {
+  register_no: string;
+  student_name: string;
+  email: string;
+  phone?: string;
+  school: string;
+  program: string;
+  branch: string;
+  batch: string;
+  program_code: string;
+  awards: { type: string; details: string }[];
+  rsvp_status: null;
+  qr_code: string;
+  checked_in: boolean;
+  upload_order: number;
+  seating_category: 'ground' | 'gallery';
+  seat:
+    | { type: 'Gallery' }
+    | { type: 'Ground'; section?: string; row?: string; column?: number };
+  email_status: { sent: boolean; opened: boolean; clicked: boolean };
+  seating_raw: string;
+}
 
-  // Separate students by award type
-  const bogsStudents: any[] = [];
-  const clubStudents: Map<string, any[]> = new Map();
-  const regularStudents: any[] = [];
+function normalizeHeader(header: string): string {
+  return header
+    .trim()
+    .toLowerCase()
+    .replace(/[\s./-]+/g, '_')
+    .replace(/[()]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
 
-  clubTypes.forEach((ct) => clubStudents.set(ct, []));
+const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
+  school: 'school',
+  school_code: 'school',
+  program: 'program',
+  programme: 'program',
+  branch: 'branch',
+  dept: 'branch',
+  department: 'branch',
+  batch: 'batch',
+  register_no: 'register_no',
+  register_number: 'register_no',
+  register_no_: 'register_no',
+  register_num: 'register_no',
+  reg_no: 'register_no',
+  reg_number: 'register_no',
+  registerno: 'register_no',
+  student_name: 'student_name',
+  name: 'student_name',
+  student: 'student_name',
+  program_code: 'program_code',
+  programe_code: 'program_code',
+  email: 'email',
+  email_id: 'email',
+  mail_id: 'email',
+  mail: 'email',
+  phone_number: 'phone_number',
+  phone_no: 'phone_number',
+  phone: 'phone_number',
+  mobile: 'phone_number',
+  mobile_number: 'phone_number',
+  award_type: 'award_type',
+  award: 'award_type',
+  award_details: 'award_details',
+  award_detail: 'award_details',
+  award_name: 'award_details',
+  seating: 'seating',
+  seat: 'seating',
+  rank: 'rank',
+};
 
-  for (const student of students) {
-    const hasAward = (type: string) =>
-      student.awards.some((a: any) => a.type.toLowerCase().includes(type));
+function normalizeRow(row: RawExcelRow): ExcelRow {
+  const normalized: ExcelRow = {};
 
-    const getClubType = () => {
-      for (const ct of clubTypes) {
-        if (student.awards.some((a: any) => a.details.toLowerCase().includes(ct))) {
-          return ct;
-        }
-      }
-      return null;
-    };
-
-    if (hasAward('bogs')) {
-      bogsStudents.push(student);
-    } else {
-      const club = getClubType();
-      if (club) {
-        clubStudents.get(club)?.push(student);
-      } else {
-        regularStudents.push(student);
-      }
-    }
-  }
-
-  // Track assigned seats
-  const assignments: Map<string, any> = new Map();
-
-  // Helper to assign seat
-  const assignSeat = (student: any, section: string, row: string, col: number) => {
-    student.seat = {
-      section,
-      row,
-      column: col,
-      type: 'Ground',
-    };
-    assignments.set(`${section}-${row}${col}`, student);
-  };
-
-  // 1. BOGS → S1-A1 to S1-A10
-  bogsStudents.forEach((s, i) => {
-    if (i < 10) {
-      assignSeat(s, 'S1', 'A', cols[i]);
-    }
+  Object.entries(row).forEach(([rawKey, value]) => {
+    const key = HEADER_ALIASES[normalizeHeader(rawKey)];
+    if (!key) return;
+    normalized[key] = String(value ?? '').trim();
   });
 
-  // 2. Regular students → S1-B1 onwards (sequential fill)
-  let sectionIdx = 0;
-  let rowIdx = 1; // Start at B (index 1)
-  let colIdx = 0;
-
-  for (const student of regularStudents) {
-    // Skip S4 (reserved for clubs)
-    while (sectionIdx < 3) {
-      const seatKey = `${sections[sectionIdx]}-${rows[rowIdx]}${cols[colIdx]}`;
-      if (!assignments.has(seatKey)) {
-        assignSeat(student, sections[sectionIdx], rows[rowIdx], cols[colIdx]);
-        colIdx++;
-        if (colIdx >= 10) {
-          colIdx = 0;
-          rowIdx++;
-          if (rowIdx >= 15) {
-            rowIdx = 0;
-            sectionIdx++;
-          }
-        }
-        break;
-      }
-      colIdx++;
-      if (colIdx >= 10) {
-        colIdx = 0;
-        rowIdx++;
-        if (rowIdx >= 15) {
-          rowIdx = 0;
-          sectionIdx++;
-        }
-      }
-    }
-  }
-
-  // Remaining seats in S2/S3 after regular: reserve blocks
-  // 35 for 100% attendance, 2 for sports, 30 for NSS
-  // These are left empty / marked as reserved
-
-  // 3. Club awards → S4 (one row per club type)
-  clubTypes.forEach((clubType, clubIdx) => {
-    const clubRow = rows[clubIdx]; // A for first club, B for second, etc.
-    const members = clubStudents.get(clubType) || [];
-    members.forEach((s, i) => {
-      if (i < 10) {
-        assignSeat(s, 'S4', clubRow, cols[i]);
-      }
-    });
-  });
-
-  return students;
+  return normalized;
 }
 
 export async function POST(request: NextRequest) {
@@ -159,29 +124,59 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rawData: ExcelRow[] = XLSX.utils.sheet_to_json(sheet);
+    const rawData = XLSX.utils.sheet_to_json<RawExcelRow>(sheet, { defval: '' });
+    console.log('--- EXCEL PARSE DIAGNOSTICS ---');
+    console.log('rawData length:', rawData.length);
+    if (rawData.length > 0) console.log('Sample raw row:', rawData[0]);
+
+    const normalizedRows: ExcelRow[] = rawData.map(normalizeRow);
+    if (normalizedRows.length > 0) console.log('Sample normalized row:', normalizedRows[0]);
+    
+    let skippedMissingRegister = 0;
+    let skippedMissingName = 0;
+    let rankOnlyRows = 0;
 
     // Merge duplicates by register_no, preserving first-seen order
-    const studentMap = new Map<string, any>();
+    const studentMap = new Map<string, ImportedStudent>();
     let uploadOrderCounter = 1;
 
-    for (const row of rawData) {
+    for (const row of normalizedRows) {
       const regNo = String(row.register_no || '').trim();
-      if (!regNo) continue;
+      const studentName = String(row.student_name || '').trim();
+      const hasRank = String(row.rank || '').trim().length > 0;
+
+      if (!regNo) {
+        skippedMissingRegister += 1;
+        if (hasRank) rankOnlyRows += 1;
+        continue;
+      }
+
+      if (!studentName) {
+        skippedMissingName += 1;
+        continue;
+      }
 
       if (studentMap.has(regNo)) {
         // Merge awards
         const existing = studentMap.get(regNo);
-        if (row.award_type && row.award_details) {
+        const derivedAwardType = row.award_type || (row.rank ? 'merit' : '');
+        const derivedAwardDetails =
+          row.award_details || (row.rank ? `Rank ${String(row.rank).trim()}` : '');
+
+        if (existing && derivedAwardType && derivedAwardDetails) {
           existing.awards.push({
-            type: row.award_type.trim(),
-            details: row.award_details.trim(),
+            type: derivedAwardType.trim(),
+            details: derivedAwardDetails.trim(),
           });
         }
       } else {
-        studentMap.set(regNo, {
+        const derivedAwardType = row.award_type || (row.rank ? 'merit' : '');
+        const derivedAwardDetails =
+          row.award_details || (row.rank ? `Rank ${String(row.rank).trim()}` : '');
+
+        const student: ImportedStudent = {
           register_no: regNo,
-          student_name: (row.student_name || '').trim(),
+          student_name: studentName,
           email: (row.email || '').trim(),
           phone: (row.phone_number || '').trim() || undefined,
           school: (row.school || '').trim(),
@@ -190,8 +185,8 @@ export async function POST(request: NextRequest) {
           batch: (row.batch || '').trim(),
           program_code: (row.program_code || '').trim(),
           awards:
-            row.award_type && row.award_details
-              ? [{ type: row.award_type.trim(), details: row.award_details.trim() }]
+            derivedAwardType && derivedAwardDetails
+              ? [{ type: derivedAwardType.trim(), details: derivedAwardDetails.trim() }]
               : [],
           rsvp_status: null,
           qr_code: randomBytes(16).toString('hex'),
@@ -203,11 +198,14 @@ export async function POST(request: NextRequest) {
             : { type: 'Ground' as const },
           email_status: { sent: false, opened: false, clicked: false },
           seating_raw: (row.seating || '').trim(),
-        });
+        };
+        studentMap.set(regNo, student);
       }
     }
 
-    let studentsArray = Array.from(studentMap.values());
+    let studentsArray: ImportedStudent[] = Array.from(studentMap.values());
+    console.log('Valid students after processing:', studentsArray.length);
+    console.log('Skipped register:', skippedMissingRegister, 'Skipped name:', skippedMissingName);
 
     // Assign seats for ground floor
     if (uploadType === 'ground') {
@@ -225,17 +223,40 @@ export async function POST(request: NextRequest) {
 
     const result = await User.bulkWrite(bulkOps);
 
+    const diagnostics = {
+      rows_read: rawData.length,
+      rows_with_register_no: normalizedRows.filter((row) => String(row.register_no || '').trim()).length,
+      skipped_missing_register: skippedMissingRegister,
+      skipped_missing_name: skippedMissingName,
+      rank_only_rows: rankOnlyRows,
+    };
+
+    if (studentsArray.length === 0 && rawData.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            rankOnlyRows > 0
+              ? 'The uploaded sheet contains mostly rank-only rows. Student identity columns like REGISTER_NUMBER and STUDENT_NAME are empty for most rows.'
+              : 'No valid student rows found in the uploaded sheet.',
+          ...diagnostics,
+          type: uploadType,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       total: studentsArray.length,
       inserted: result.upsertedCount,
       modified: result.modifiedCount,
       type: uploadType,
+      ...diagnostics,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: error.message || 'Upload failed' },
+      { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 500 }
     );
   }

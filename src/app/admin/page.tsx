@@ -27,6 +27,17 @@ interface Student {
   seating_category: string;
 }
 
+interface ActionResult {
+  success?: boolean;
+  error?: string;
+  total?: number;
+  inserted?: number;
+  modified?: number;
+  type?: string;
+  sent?: number;
+  message?: string;
+}
+
 type TabType = 'dashboard' | 'upload' | 'students' | 'seating' | 'email';
 
 export default function AdminPage() {
@@ -40,9 +51,9 @@ export default function AdminPage() {
   const [filterAward, setFilterAward] = useState('');
   const [filterCheckedIn, setFilterCheckedIn] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<ActionResult | null>(null);
   const [sendingEmails, setSendingEmails] = useState(false);
-  const [emailResult, setEmailResult] = useState<any>(null);
+  const [emailResult, setEmailResult] = useState<ActionResult | null>(null);
   const [seatStudents, setSeatStudents] = useState<Student[]>([]);
   const [hoveredSeat, setHoveredSeat] = useState<Student | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -144,8 +155,8 @@ export default function AdminPage() {
         const data = await res.json();
         setUploadResult(data);
         fetchStats();
-      } catch (err: any) {
-        setUploadResult({ error: err.message });
+      } catch (err: unknown) {
+        setUploadResult({ error: err instanceof Error ? err.message : 'Upload failed' });
       } finally {
         setUploading(false);
       }
@@ -161,8 +172,8 @@ export default function AdminPage() {
       const data = await res.json();
       setEmailResult(data);
       fetchStats();
-    } catch (err: any) {
-      setEmailResult({ error: err.message });
+    } catch (err: unknown) {
+      setEmailResult({ error: err instanceof Error ? err.message : 'Email sending failed' });
     } finally {
       setSendingEmails(false);
     }
