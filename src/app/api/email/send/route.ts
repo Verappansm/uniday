@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/dbConnect';
+import User from '@/models/User';
+
+export async function POST(request: NextRequest) {
+  try {
+    await dbConnect();
+
+    const users = await User.find({ 'email_status.sent': false }).limit(50);
+
+    if (users.length === 0) {
+      return NextResponse.json({ message: 'No pending emails', sent: 0 });
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appscriptUrl = process.env.APPSCRIPT_URL;
+
+    if (!appscriptUrl) {
+      return NextResponse.json({ error: 'APPSCRIPT_URL not configured' }, { status: 500 });
+    }
+
+    const emailPayload = users.map((user) => ({
+      to: user.email,
+      name: user.student_name,
+      register_no: user.register_no,
+      awards: user.awards.map((a: any) => `${a.type}: ${a.details}`).join(', '),
+      rsvp_link: `${appUrl}/rsvp/${user.qr_code}`,
+      tracking_pixel: `${appUrl}/api/track/open/${user.qr_code}`,
+      qr_data: user.qr_code,
+    }));
+
+    // Send to AppScript
+    const response = await fetch(appscriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails: emailPayload }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`AppScript returned ${response.status}`);
+    }
+
+    // Mark as sent
+    const ids = users.map((u) => u._id);
+    await User.updateMany(
+      { _id: { $in: ids } },
+      {
+        $set: {
+          'email_status.sent': true,
+          'email_status.sent_at': new Date(),
+        },
+      }
+    );
+
+    return NextResponse.json({ success: true, sent: users.length });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
