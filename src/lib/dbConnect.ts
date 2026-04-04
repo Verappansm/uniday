@@ -12,11 +12,21 @@ if (!MONGODB_URI) {
  * during API Route usage.
  */
 
-let cached = (global as any).mongoose;
-
-if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+declare global {
+  var mongooseCache:
+    | {
+        conn: typeof mongoose | null;
+        promise: Promise<typeof mongoose> | null;
+      }
+    | undefined;
 }
+
+const cached =
+  global.mongooseCache ||
+  (global.mongooseCache = {
+    conn: null,
+    promise: null,
+  });
 
 async function dbConnect() {
   if (cached.conn) {

@@ -30,6 +30,7 @@ export interface IUser extends Document {
   checked_in: boolean;
   seating_category: 'ground' | 'gallery';
   seat?: ISeat;
+  seating_raw?: string;
   email_status: {
     sent: boolean;
     opened: boolean;
@@ -70,6 +71,7 @@ const UserSchema = new Schema<IUser>({
   checked_in: { type: Boolean, default: false },
   seating_category: { type: String, enum: ['ground', 'gallery'], default: 'ground' },
   seat: SeatSchema,
+  seating_raw: { type: String },
   email_status: {
     sent: { type: Boolean, default: false },
     opened: { type: Boolean, default: false },
