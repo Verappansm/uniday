@@ -646,47 +646,46 @@ export default function VolunteerPage() {
             </div>
 
             <div style={styles.scanShell}>
-              {!scanning ? (
-                <div style={styles.scanIdle}>
-                  <div style={styles.qrBadge}>
-                    QR
-                  </div>
-                  <p style={{ fontSize: '1rem', fontWeight: 700 }}>Ready to start scanning</p>
-                  <p style={styles.scanIdleText}>
-                    Use the back camera for faster QR detection. If QR scanning is not supported, paste the QR token below.
+              <div style={{ ...styles.scanIdle, display: !scanning ? 'flex' : 'none' }}>
+                <div style={styles.qrBadge}>
+                  QR
+                </div>
+                <p style={{ fontSize: '1rem', fontWeight: 700 }}>Ready to start scanning</p>
+                <p style={styles.scanIdleText}>
+                  Use the back camera for faster QR detection. If QR scanning is not supported, paste the QR token below.
+                </p>
+                <button
+                  onClick={startScanner}
+                  className="btn-primary"
+                  style={styles.primaryAction}
+                  disabled={checkingIn}
+                >
+                  Start Camera
+                </button>
+              </div>
+
+              <div style={{ display: scanning ? 'block' : 'none' }}>
+                <video
+                  ref={videoRef}
+                  style={styles.video}
+                  playsInline
+                  autoPlay
+                  muted
+                />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div style={styles.videoFooter}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Scanning continuously every 0.5 seconds.
                   </p>
                   <button
-                    onClick={startScanner}
-                    className="btn-primary"
-                    style={styles.primaryAction}
-                    disabled={checkingIn}
+                    onClick={stopScanner}
+                    className="btn-danger"
+                    style={{ padding: '10px 16px', fontSize: '0.85rem' }}
                   >
-                    Start Camera
+                    Stop Camera
                   </button>
                 </div>
-              ) : (
-                <div>
-                  <video
-                    ref={videoRef}
-                    style={styles.video}
-                    playsInline
-                    muted
-                  />
-                  <canvas ref={canvasRef} style={{ display: 'none' }} />
-                  <div style={styles.videoFooter}>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      Scanning continuously every 0.5 seconds.
-                    </p>
-                    <button
-                      onClick={stopScanner}
-                      className="btn-danger"
-                      style={{ padding: '10px 16px', fontSize: '0.85rem' }}
-                    >
-                      Stop Camera
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
 
             <div style={styles.helperCard}>
