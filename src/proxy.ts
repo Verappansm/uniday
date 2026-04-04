@@ -12,6 +12,7 @@ const protectedPaths: Record<string, string[]> = {
   '/api/users': ['admin', 'volunteer', 'mc'],
   '/api/dashboard': ['admin'],
   '/api/seating': ['admin', 'volunteer', 'mc'],
+  '/api/checkin': ['admin', 'volunteer'],
 };
 
 export async function proxy(request: NextRequest) {
@@ -22,7 +23,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/rsvp') ||
     pathname.startsWith('/api/rsvp') ||
     pathname.startsWith('/api/track') ||
-    pathname.startsWith('/api/checkin') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/login') ||
     pathname === '/'

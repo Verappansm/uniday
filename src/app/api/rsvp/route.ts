@@ -28,16 +28,24 @@ export async function POST(request: NextRequest) {
       student: {
         student_name: user.student_name,
         register_no: user.register_no,
+        email: user.email,
         awards: user.awards,
+        rsvp_status: user.rsvp_status,
+        rsvp_reason: user.rsvp_reason,
         seat: user.seat,
         seating_category: user.seating_category,
         school: user.school,
+        program: user.program,
         branch: user.branch,
+        batch: user.batch,
         qr_code: user.qr_code,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'RSVP failed' },
+      { status: 500 }
+    );
   }
 }
 
@@ -80,7 +88,10 @@ export async function GET(request: NextRequest) {
         qr_code: user.qr_code,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to load RSVP' },
+      { status: 500 }
+    );
   }
 }

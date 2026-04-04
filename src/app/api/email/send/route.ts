@@ -1,12 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     await dbConnect();
 
-    const users = await User.find({ 'email_status.sent': false }).limit(50);
+    const users = await User.find({
+      'email_status.sent': false,
+      email: { $exists: true, $ne: '' },
+    }).limit(100);
 
     if (users.length === 0) {
       return NextResponse.json({ message: 'No pending emails', sent: 0 });
@@ -23,10 +26,17 @@ export async function POST(request: NextRequest) {
       to: user.email,
       name: user.student_name,
       register_no: user.register_no,
-      awards: user.awards.map((a: any) => `${a.type}: ${a.details}`).join(', '),
+      awards: user.awards.map((award: { type: string; details: string }) => ({
+        type: award.type,
+        details: award.details,
+      })),
+      awards_text: user.awards
+        .map((award: { type: string; details: string }) => `${award.type}: ${award.details}`)
+        .join(', '),
       rsvp_link: `${appUrl}/rsvp/${user.qr_code}`,
       tracking_pixel: `${appUrl}/api/track/open/${user.qr_code}`,
       qr_data: user.qr_code,
+      qr_image_url: `${appUrl}/api/track/open/${user.qr_code}`,
     }));
 
     // Send to AppScript
@@ -40,20 +50,60 @@ export async function POST(request: NextRequest) {
       throw new Error(`AppScript returned ${response.status}`);
     }
 
-    // Mark as sent
-    const ids = users.map((u) => u._id);
-    await User.updateMany(
-      { _id: { $in: ids } },
-      {
-        $set: {
-          'email_status.sent': true,
-          'email_status.sent_at': new Date(),
-        },
-      }
+    const responseData = (await response.json()) as {
+      success?: boolean;
+      results?: Array<{ to: string; status: string; error?: string }>;
+      error?: string;
+    };
+
+    if (!responseData.success) {
+      throw new Error(responseData.error || 'AppScript email send failed');
+    }
+
+    const sentAddresses = new Set(
+      (responseData.results || [])
+        .filter((result) => result.status === 'sent')
+        .map((result) => result.to.toLowerCase())
     );
 
-    return NextResponse.json({ success: true, sent: users.length });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const sentIds = users
+      .filter((user) => sentAddresses.has(user.email.toLowerCase()))
+      .map((user) => user._id);
+
+    const sentRecipients = users
+      .filter((user) => sentAddresses.has(user.email.toLowerCase()))
+      .map((user) => ({
+        register_no: user.register_no,
+        student_name: user.student_name,
+        email: user.email,
+      }));
+
+    if (sentIds.length > 0) {
+      await User.updateMany(
+        { _id: { $in: sentIds } },
+        {
+          $set: {
+            'email_status.sent': true,
+            'email_status.sent_at': new Date(),
+          },
+        }
+      );
+    }
+
+    const failed = (responseData.results || []).filter((result) => result.status !== 'sent');
+
+    return NextResponse.json({
+      success: true,
+      attempted: users.length,
+      sent: sentIds.length,
+      failed: failed.length,
+      sent_recipients: sentRecipients,
+      failures: failed,
+    });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Email sending failed' },
+      { status: 500 }
+    );
   }
 }

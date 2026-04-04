@@ -25,11 +25,40 @@ interface Student {
   checked_in: boolean;
   seat?: { section: string; row: string; column: number; type: string };
   seating_category: string;
+  email_status?: {
+    sent: boolean;
+    opened: boolean;
+    clicked: boolean;
+    sent_at?: string;
+    opened_at?: string;
+    clicked_at?: string;
+  };
+}
+
+interface ActionResult {
+  success?: boolean;
+  error?: string;
+  total?: number;
+  inserted?: number;
+  modified?: number;
+  type?: string;
+  sent?: number;
+  attempted?: number;
+  failed?: number;
+  message?: string;
+  rows_read?: number;
+  rows_with_register_no?: number;
+  skipped_missing_register?: number;
+  skipped_missing_name?: number;
+  rank_only_rows?: number;
+  sent_recipients?: Array<{ register_no: string; student_name: string; email: string }>;
+  failures?: Array<{ to: string; status: string; error?: string }>;
 }
 
 type TabType = 'dashboard' | 'upload' | 'students' | 'seating' | 'email';
 
 export default function AdminPage() {
+  const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stats, setStats] = useState<Stats | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -38,15 +67,35 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [filterRsvp, setFilterRsvp] = useState('');
   const [filterAward, setFilterAward] = useState('');
-  const [filterCheckedIn, setFilterCheckedIn] = useState('');
+  const [filterCheckedIn, setFilterCheckedIn] = useState<'' | 'present' | 'absent'>('');
   const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<ActionResult | null>(null);
   const [sendingEmails, setSendingEmails] = useState(false);
-  const [emailResult, setEmailResult] = useState<any>(null);
+  const [emailResult, setEmailResult] = useState<ActionResult | null>(null);
+  const [emailHistory, setEmailHistory] = useState<Student[]>([]);
+  const [emailHistoryFilter, setEmailHistoryFilter] = useState<'all' | 'sent' | 'pending' | 'opened' | 'clicked'>('all');
   const [seatStudents, setSeatStudents] = useState<Student[]>([]);
   const [hoveredSeat, setHoveredSeat] = useState<Student | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const router = useRouter();
+
+  useEffect(() => {
+    const verifyRole = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (!res.ok || data.role !== 'admin') {
+          router.push('/login');
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    verifyRole();
+  }, [router]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -110,17 +159,57 @@ export default function AdminPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const fetchEmailHistory = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ limit: '0' });
+      if (emailHistoryFilter !== 'all') {
+        params.set('email_status', emailHistoryFilter);
+      }
+
+      const res = await fetch(`/api/users?${params}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEmailHistory([]);
+        return;
+      }
+
+      const users = (data.users || []) as Student[];
+      users.sort((a, b) => {
+        const aTime = a.email_status?.sent_at ? new Date(a.email_status.sent_at).getTime() : 0;
+        const bTime = b.email_status?.sent_at ? new Date(b.email_status.sent_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      setEmailHistory(users);
+    } catch (err) {
+      console.error('Email history fetch error:', err);
+      setEmailHistory([]);
+    }
+  }, [emailHistoryFilter]);
 
   useEffect(() => {
-    if (activeTab === 'students') fetchStudents();
-  }, [activeTab, fetchStudents]);
+    if (authChecked) fetchStats();
+  }, [authChecked, fetchStats]);
 
   useEffect(() => {
-    if (activeTab === 'seating') fetchSeatMap();
-  }, [activeTab, fetchSeatMap]);
+    if (authChecked && activeTab === 'students') fetchStudents();
+  }, [activeTab, authChecked, fetchStudents]);
+
+  useEffect(() => {
+    if (authChecked && activeTab === 'seating') fetchSeatMap();
+  }, [activeTab, authChecked, fetchSeatMap]);
+
+  useEffect(() => {
+    if (authChecked && activeTab === 'email') fetchEmailHistory();
+  }, [activeTab, authChecked, fetchEmailHistory]);
+
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -144,8 +233,8 @@ export default function AdminPage() {
         const data = await res.json();
         setUploadResult(data);
         fetchStats();
-      } catch (err: any) {
-        setUploadResult({ error: err.message });
+      } catch (err: unknown) {
+        setUploadResult({ error: err instanceof Error ? err.message : 'Upload failed' });
       } finally {
         setUploading(false);
       }
@@ -161,8 +250,9 @@ export default function AdminPage() {
       const data = await res.json();
       setEmailResult(data);
       fetchStats();
-    } catch (err: any) {
-      setEmailResult({ error: err.message });
+      fetchEmailHistory();
+    } catch (err: unknown) {
+      setEmailResult({ error: err instanceof Error ? err.message : 'Email sending failed' });
     } finally {
       setSendingEmails(false);
     }
@@ -188,12 +278,14 @@ export default function AdminPage() {
         <div style={{
           textAlign: 'center',
           padding: '12px 40px',
-          background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
+          background: '#1a1a1a',
+          color: '#e2e2e2',
+          border: '1px solid #333',
           borderRadius: '12px',
           marginBottom: '24px',
-          fontWeight: 700,
-          fontSize: '0.9rem',
-          letterSpacing: '0.1em',
+          fontWeight: 800,
+          fontSize: '0.8rem',
+          letterSpacing: '0.2em',
           textTransform: 'uppercase',
         }}>
           🎤 STAGE
@@ -313,8 +405,8 @@ export default function AdminPage() {
         zIndex: 50,
       }}>
         <div style={{ marginBottom: '32px', padding: '0 8px' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
-            <span className="gradient-text">UniDay</span>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
+            UniDay
           </h1>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
         </div>
@@ -347,9 +439,17 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <button onClick={handleLogout} className="btn-secondary" style={{ marginTop: 'auto', width: '100%' }}>
-          Sign Out
-        </button>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+           <button onClick={() => window.open('/mc', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+             Go to MC Dashboard ↗
+           </button>
+           <button onClick={() => window.open('/volunteer', '_blank')} className="btn-secondary" style={{ width: '100%' }}>
+             Go to Volunteer ↗
+           </button>
+           <button onClick={handleLogout} className="btn-danger" style={{ width: '100%', marginTop: '8px' }}>
+             Sign Out
+           </button>
+        </div>
       </aside>
 
       {/* Main content */}
@@ -362,7 +462,7 @@ export default function AdminPage() {
             {/* Top stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               <div className="stat-card">
-                <div className="stat-value gradient-text">{stats.total}</div>
+                <div className="stat-value" style={{ color: '#fff' }}>{stats.total}</div>
                 <div className="stat-label">Total Students</div>
               </div>
               <div className="stat-card">
@@ -456,17 +556,17 @@ export default function AdminPage() {
             <div className="glass-card" style={{ padding: '24px', marginBottom: '32px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px' }}>📋 Expected Excel Column Format</h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                Your Excel file should have these columns in this exact order:
+                Your Excel file should have these columns:
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {['school', 'program', 'branch', 'batch', 'register_no', 'student_name', 'program_code', 'email', 'phone_number', 'award_type', 'award_details', 'seating'].map((col) => (
+                {['school', 'program', 'branch', 'batch', 'register_no', 'student_name', 'program_code', 'email', 'phone_number', 'award_type', 'award_details'].map((col) => (
                   <span key={col} className="badge badge-accent" style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
                     {col}
                   </span>
                 ))}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '12px' }}>
-                💡 If a student has multiple awards, add them as separate rows with the same <strong>register_no</strong>. They will be merged automatically.
+                💡 If a student has multiple awards, add them as separate rows with the same <strong>register_no</strong>. They will be merged automatically, and seats will be auto-assigned by the backend.
               </p>
             </div>
 
@@ -508,10 +608,44 @@ export default function AdminPage() {
             {uploadResult && (
               <div className="glass-card" style={{ padding: '20px', marginTop: '24px' }}>
                 {uploadResult.error ? (
-                  <div style={{ color: 'var(--danger)' }}>❌ {uploadResult.error}</div>
+                  <div>
+                    <div style={{ color: 'var(--danger)', marginBottom: '12px' }}>❌ {uploadResult.error}</div>
+                    {(uploadResult.rows_read !== undefined || uploadResult.rows_with_register_no !== undefined) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
+                        {[
+                          ['Rows read', uploadResult.rows_read],
+                          ['Rows with reg no', uploadResult.rows_with_register_no],
+                          ['Skipped no reg', uploadResult.skipped_missing_register],
+                          ['Skipped no name', uploadResult.skipped_missing_name],
+                          ['Rank-only rows', uploadResult.rank_only_rows],
+                        ].map(([label, value]) => (
+                          <div key={String(label)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{value ?? 0}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div style={{ color: 'var(--success)' }}>
-                    ✅ Upload successful! {uploadResult.total} students processed ({uploadResult.inserted} new, {uploadResult.modified} updated) — Type: {uploadResult.type}
+                  <div>
+                    <div style={{ color: 'var(--success)', marginBottom: '12px' }}>
+                      ✅ Upload successful! {uploadResult.total} students processed ({uploadResult.inserted} new, {uploadResult.modified} updated) — Type: {uploadResult.type}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
+                      {[
+                        ['Rows read', uploadResult.rows_read],
+                        ['Rows with reg no', uploadResult.rows_with_register_no],
+                        ['Skipped no reg', uploadResult.skipped_missing_register],
+                        ['Skipped no name', uploadResult.skipped_missing_name],
+                        ['Rank-only rows', uploadResult.rank_only_rows],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{value ?? 0}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -522,9 +656,29 @@ export default function AdminPage() {
         {/* STUDENTS TABLE */}
         {activeTab === 'students' && (
           <div className="fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Students ({totalStudents})</h2>
-            </div>
+            {/* Global Quick Stats */}
+            {stats && (
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Total</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{stats.total}</div>
+                </div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>RSVP Accepted</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>{stats.rsvp.yes}</div>
+                </div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Checked In</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4ade80' }}>{stats.attendance.checkedIn}</div>
+                </div>
+                <div style={{ flex: 1, padding: '16px', borderRadius: '12px', background: '#171717', border: '1px solid #222' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Absence Rate</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ef4444' }}>
+                    {stats.total > 0 ? Math.round(((stats.total - stats.attendance.checkedIn) / stats.total) * 100) : 0}%
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Filters */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -561,12 +715,15 @@ export default function AdminPage() {
               <select
                 className="input-field"
                 value={filterCheckedIn}
-                onChange={(e) => { setFilterCheckedIn(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => {
+                  setFilterCheckedIn(e.target.value as '' | 'present' | 'absent');
+                  setCurrentPage(1);
+                }}
                 style={{ maxWidth: '160px' }}
               >
                 <option value="">All Attendance</option>
-                <option value="true">Checked In</option>
-                <option value="false">Not Checked In</option>
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
               </select>
             </div>
 
@@ -593,16 +750,22 @@ export default function AdminPage() {
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {s.awards.map((a, i) => (
-                            <span key={i} className={`badge badge-${a.type === 'merit' ? 'warning' : a.type === 'bogs' ? 'accent' : a.type === 'sports' ? 'success' : 'info'}`}>
+                            <span key={i} style={{
+                              padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600,
+                              background: a.type === 'merit' ? 'rgba(251,191,36,0.1)' : 'rgba(99,102,241,0.1)',
+                              color: a.type === 'merit' ? '#fbbf24' : '#818cf8',
+                              border: `1px solid ${a.type === 'merit' ? 'rgba(251,191,36,0.2)' : 'rgba(99,102,241,0.2)'}`,
+                              textTransform: 'uppercase', letterSpacing: '0.04em'
+                            }}>
                               {a.type}: {a.details}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td>
-                        {s.rsvp_status === 'yes' && <span className="badge badge-success">Yes</span>}
-                        {s.rsvp_status === 'no' && <span className="badge badge-danger">No</span>}
-                        {!s.rsvp_status && <span className="badge badge-warning">Pending</span>}
+                        {s.rsvp_status === 'yes' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>YES</span>}
+                        {s.rsvp_status === 'no' && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>NO</span>}
+                        {!s.rsvp_status && <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>PENDING</span>}
                       </td>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                         {s.seating_category === 'gallery' ? (
@@ -613,9 +776,15 @@ export default function AdminPage() {
                       </td>
                       <td>
                         {s.checked_in ? (
-                          <span className="badge badge-success">✓ Present</span>
+                          <span style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                            PRESENT
+                          </span>
                         ) : (
-                          <span className="badge badge-danger">Absent</span>
+                          <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                            ABSENT
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -652,7 +821,7 @@ export default function AdminPage() {
           <div className="fade-in">
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '8px' }}>Email Management</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '0.9rem' }}>
-              Send invitation emails in batches of 50 via Google AppScript.
+              Send invitation emails in batches of 50 via Google AppScript and review the mailing history below.
             </p>
 
             <div className="glass-card" style={{ padding: '32px', textAlign: 'center', maxWidth: '500px' }}>
@@ -671,12 +840,120 @@ export default function AdminPage() {
               </button>
 
               {emailResult && (
-                <div style={{ marginTop: '16px', padding: '12px', borderRadius: '12px', background: emailResult.error ? 'var(--danger-glow)' : 'var(--success-glow)' }}>
+                <div style={{ marginTop: '16px', padding: '16px', borderRadius: '12px', background: emailResult.error ? 'var(--danger-glow)' : 'var(--success-glow)', textAlign: 'left' }}>
                   {emailResult.error ? (
                     <span style={{ color: 'var(--danger)' }}>❌ {emailResult.error}</span>
                   ) : (
-                    <span style={{ color: 'var(--success)' }}>✅ Sent {emailResult.sent} emails</span>
+                    <div>
+                      <div style={{ color: 'var(--success)', fontWeight: 700, marginBottom: '10px' }}>
+                        ✅ Sent {emailResult.sent ?? 0} of {emailResult.attempted ?? 0} attempted emails
+                      </div>
+                      {Boolean(emailResult.sent_recipients?.length) && (
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Sent to
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {emailResult.sent_recipients?.map((recipient) => (
+                              <div key={`${recipient.register_no}-${recipient.email}`} style={{ fontSize: '0.82rem' }}>
+                                {recipient.student_name} · {recipient.register_no} · {recipient.email}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {Boolean(emailResult.failures?.length) && (
+                        <div>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Not sent to
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {emailResult.failures?.map((failure, index) => (
+                              <div key={`${failure.to}-${index}`} style={{ fontSize: '0.82rem', color: 'var(--danger)' }}>
+                                {failure.to || 'Unknown recipient'} {failure.error ? `· ${failure.error}` : ''}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            <div className="glass-card" style={{ padding: '24px', marginTop: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '4px' }}>History</h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Sent, pending, opened, and clicked mail history.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {(['all', 'sent', 'pending', 'opened', 'clicked'] as const).map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => setEmailHistoryFilter(value)}
+                      className={emailHistoryFilter === value ? 'btn-primary' : 'btn-secondary'}
+                      style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+                    >
+                      {value === 'all' ? 'All' : value.charAt(0).toUpperCase() + value.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {emailHistory.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No email history available for this filter.</div>
+              ) : (
+                <div style={{ overflow: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Register No</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Opened</th>
+                        <th>Clicked</th>
+                        <th>Sent At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {emailHistory.slice(0, 200).map((student) => (
+                        <tr key={student._id}>
+                          <td>{student.student_name}</td>
+                          <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{student.register_no}</td>
+                          <td>{student.email || 'Not available'}</td>
+                          <td>
+                            {student.email_status?.sent ? (
+                              <span className="badge badge-success">Sent</span>
+                            ) : (
+                              <span className="badge badge-warning">Pending</span>
+                            )}
+                          </td>
+                          <td>
+                            {student.email_status?.opened ? (
+                              <span className="badge badge-info">Opened</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No</span>
+                            )}
+                          </td>
+                          <td>
+                            {student.email_status?.clicked ? (
+                              <span className="badge badge-accent">Clicked</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No</span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                            {student.email_status?.sent_at ? new Date(student.email_status.sent_at).toLocaleString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
