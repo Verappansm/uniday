@@ -1,17 +1,4 @@
-/**
- * UniDay Email Service — Google AppScript
- *
- * SETUP INSTRUCTIONS:
- * 1. Go to https://script.google.com
- * 2. Create a new project
- * 3. Paste this entire code into the editor
- * 4. Click Deploy > New Deployment
- * 5. Choose "Web app"
- * 6. Set "Execute as" = "Me"
- * 7. Set "Who has access" = "Anyone"
- * 8. Click Deploy and copy the URL
- * 9. Paste the URL into your .env.local as APPSCRIPT_URL
- */
+// App Script for Sending Mails
 
 function doGet() {
   return ContentService
@@ -21,6 +8,10 @@ function doGet() {
 
 function doPost(e) {
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return jsonResponse({ success: false, error: 'Missing POST body' });
+    }
+
     var data = JSON.parse(e.postData.contents);
     var emails = data.emails || [];
     var results = [];
@@ -28,12 +19,19 @@ function doPost(e) {
     for (var i = 0; i < emails.length; i++) {
       var email = emails[i];
       try {
+        if (!email || !email.to) {
+          results.push({ to: '', status: 'failed', error: 'Missing recipient email' });
+          continue;
+        }
+
         var htmlBody = generateEmailHTML(email);
+        var textBody = generateEmailText(email);
 
         MailApp.sendEmail({
           to: email.to,
           subject: '🎓 You\'re Invited! UniDay Award Ceremony',
           htmlBody: htmlBody,
+          body: textBody,
           name: 'UniDay Award Ceremony',
         });
 
@@ -48,29 +46,81 @@ function doPost(e) {
       }
     }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: true, results: results }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ success: true, results: results });
 
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ success: false, error: err.toString() });
   }
+}
+
+function jsonResponse(payload) {
+  return ContentService
+    .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function generateEmailText(email) {
+  var awards = Array.isArray(email.awards) ? email.awards : [];
+  var awardLines = [];
+
+  for (var i = 0; i < awards.length; i++) {
+    awardLines.push('- ' + String(awards[i].type || '') + ': ' + String(awards[i].details || ''));
+  }
+
+  if (awardLines.length === 0 && email.awards_text) {
+    awardLines.push('- ' + String(email.awards_text));
+  }
+
+  var lines = [
+    'UniDay Award Ceremony',
+    '',
+    'Hello ' + String(email.name || 'Student') + ',',
+    '',
+    'You have been selected for the following award(s):',
+    awardLines.join('\n') || '- Award',
+    '',
+  ];
+
+  if (awards.length > 1) {
+    lines.push(
+      'Multiple awards detected. Please contact the event representative on arrival for seating and stage instructions.',
+      ''
+    );
+  }
+
+  lines.push(
+    'Please RSVP here:',
+    String(email.rsvp_link || ''),
+    '',
+    'Register No: ' + String(email.register_no || ''),
+    '',
+    'This is an automated email from UniDay Award Ceremony Management System.'
+  );
+
+  return lines.join('\n');
 }
 
 function generateEmailHTML(email) {
   var awards = Array.isArray(email.awards) ? email.awards : [];
-  var awardsText = email.awards_text || 'Award';
+  var awardsText = escapeHtml(email.awards_text || 'Award');
   var multiAward = awards.length > 1;
-  var qrImageUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=' + encodeURIComponent(email.qr_data || '');
+  var qrImageUrl = 'https://quickchart.io/qr?size=220&text=' + encodeURIComponent(email.qr_data || '');
   var awardListHtml = '';
 
   if (awards.length > 0) {
     for (var i = 0; i < awards.length; i++) {
       awardListHtml +=
         '<li style="margin:0 0 8px;color:#f0f0f5;font-size:14px;line-height:1.5;">' +
-        '<strong style="text-transform:capitalize;">' + awards[i].type + '</strong>: ' + awards[i].details +
+        '<strong style="text-transform:capitalize;">' + escapeHtml(awards[i].type) + '</strong>: ' + escapeHtml(awards[i].details) +
         '</li>';
     }
   } else {
@@ -91,7 +141,7 @@ function generateEmailHTML(email) {
 
     // Body
     '<div style="padding:30px;">' +
-    '<p style="color:#f0f0f5;font-size:18px;margin:0 0 8px;">Hello <strong>' + email.name + '</strong>,</p>' +
+    '<p style="color:#f0f0f5;font-size:18px;margin:0 0 8px;">Hello <strong>' + escapeHtml(email.name) + '</strong>,</p>' +
     '<p style="color:#8b8ba3;font-size:14px;line-height:1.6;margin:0 0 24px;">You have been selected for the following award(s) at our university ceremony:</p>' +
 
     // Awards
@@ -110,7 +160,7 @@ function generateEmailHTML(email) {
 
     // CTA Button
     '<div style="text-align:center;margin:32px 0;">' +
-    '<a href="' + email.rsvp_link + '" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#7c3aed);color:white;text-decoration:none;padding:16px 40px;border-radius:12px;font-weight:bold;font-size:16px;">RSVP Now</a>' +
+    '<a href="' + escapeHtml(email.rsvp_link) + '" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#7c3aed);color:white;text-decoration:none;padding:16px 40px;border-radius:12px;font-weight:bold;font-size:16px;">RSVP Now</a>' +
     '</div>' +
 
     '<div style="background:#ffffff;border-radius:16px;padding:18px;margin:0 auto 20px;max-width:260px;text-align:center;">' +
@@ -118,7 +168,7 @@ function generateEmailHTML(email) {
     '<p style="color:#111827;font-size:12px;line-height:1.5;margin:0;">Use this QR code for event-day verification after RSVP confirmation.</p>' +
     '</div>' +
 
-    '<p style="color:#5b5b73;font-size:12px;text-align:center;margin:24px 0 0;">Register No: ' + email.register_no + '</p>' +
+    '<p style="color:#5b5b73;font-size:12px;text-align:center;margin:24px 0 0;">Register No: ' + escapeHtml(email.register_no) + '</p>' +
     '</div>' +
 
     // Footer
@@ -129,7 +179,9 @@ function generateEmailHTML(email) {
     '</div>' +
 
     // Tracking pixel
-    '<img src="' + email.tracking_pixel + '" width="1" height="1" style="display:none;" />' +
+    (email.tracking_pixel
+      ? '<img src="' + escapeHtml(email.tracking_pixel) + '" width="1" height="1" style="display:none;" />'
+      : '') +
 
     '</body></html>';
 }
@@ -149,7 +201,3 @@ function testEmail() {
 
   Logger.log(generateEmailHTML(testData));
 }
-
-globalThis.doGet = doGet;
-globalThis.doPost = doPost;
-globalThis.testEmail = testEmail;
