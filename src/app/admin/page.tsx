@@ -36,11 +36,17 @@ interface ActionResult {
   type?: string;
   sent?: number;
   message?: string;
+  rows_read?: number;
+  rows_with_register_no?: number;
+  skipped_missing_register?: number;
+  skipped_missing_name?: number;
+  rank_only_rows?: number;
 }
 
 type TabType = 'dashboard' | 'upload' | 'students' | 'seating' | 'email';
 
 export default function AdminPage() {
+  const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stats, setStats] = useState<Stats | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -58,6 +64,24 @@ export default function AdminPage() {
   const [hoveredSeat, setHoveredSeat] = useState<Student | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const router = useRouter();
+
+  useEffect(() => {
+    const verifyRole = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (!res.ok || data.role !== 'admin') {
+          router.push('/login');
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    verifyRole();
+  }, [router]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -122,16 +146,24 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (authChecked) fetchStats();
+  }, [authChecked, fetchStats]);
 
   useEffect(() => {
-    if (activeTab === 'students') fetchStudents();
-  }, [activeTab, fetchStudents]);
+    if (authChecked && activeTab === 'students') fetchStudents();
+  }, [activeTab, authChecked, fetchStudents]);
 
   useEffect(() => {
-    if (activeTab === 'seating') fetchSeatMap();
-  }, [activeTab, fetchSeatMap]);
+    if (authChecked && activeTab === 'seating') fetchSeatMap();
+  }, [activeTab, authChecked, fetchSeatMap]);
+
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -199,12 +231,14 @@ export default function AdminPage() {
         <div style={{
           textAlign: 'center',
           padding: '12px 40px',
-          background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
+          background: '#1a1a1a',
+          color: '#e2e2e2',
+          border: '1px solid #333',
           borderRadius: '12px',
           marginBottom: '24px',
-          fontWeight: 700,
-          fontSize: '0.9rem',
-          letterSpacing: '0.1em',
+          fontWeight: 800,
+          fontSize: '0.8rem',
+          letterSpacing: '0.2em',
           textTransform: 'uppercase',
         }}>
           🎤 STAGE
@@ -324,8 +358,8 @@ export default function AdminPage() {
         zIndex: 50,
       }}>
         <div style={{ marginBottom: '32px', padding: '0 8px' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
-            <span className="gradient-text">UniDay</span>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 950, letterSpacing: '-0.02em', color: '#fff' }}>
+            UniDay
           </h1>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Admin Panel</p>
         </div>
@@ -373,7 +407,7 @@ export default function AdminPage() {
             {/* Top stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               <div className="stat-card">
-                <div className="stat-value gradient-text">{stats.total}</div>
+                <div className="stat-value" style={{ color: '#fff' }}>{stats.total}</div>
                 <div className="stat-label">Total Students</div>
               </div>
               <div className="stat-card">
@@ -467,17 +501,17 @@ export default function AdminPage() {
             <div className="glass-card" style={{ padding: '24px', marginBottom: '32px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px' }}>📋 Expected Excel Column Format</h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                Your Excel file should have these columns in this exact order:
+                Your Excel file should have these columns:
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {['school', 'program', 'branch', 'batch', 'register_no', 'student_name', 'program_code', 'email', 'phone_number', 'award_type', 'award_details', 'seating'].map((col) => (
+                {['school', 'program', 'branch', 'batch', 'register_no', 'student_name', 'program_code', 'email', 'phone_number', 'award_type', 'award_details'].map((col) => (
                   <span key={col} className="badge badge-accent" style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
                     {col}
                   </span>
                 ))}
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '12px' }}>
-                💡 If a student has multiple awards, add them as separate rows with the same <strong>register_no</strong>. They will be merged automatically.
+                💡 If a student has multiple awards, add them as separate rows with the same <strong>register_no</strong>. They will be merged automatically, and seats will be auto-assigned by the backend.
               </p>
             </div>
 
@@ -519,10 +553,44 @@ export default function AdminPage() {
             {uploadResult && (
               <div className="glass-card" style={{ padding: '20px', marginTop: '24px' }}>
                 {uploadResult.error ? (
-                  <div style={{ color: 'var(--danger)' }}>❌ {uploadResult.error}</div>
+                  <div>
+                    <div style={{ color: 'var(--danger)', marginBottom: '12px' }}>❌ {uploadResult.error}</div>
+                    {(uploadResult.rows_read !== undefined || uploadResult.rows_with_register_no !== undefined) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
+                        {[
+                          ['Rows read', uploadResult.rows_read],
+                          ['Rows with reg no', uploadResult.rows_with_register_no],
+                          ['Skipped no reg', uploadResult.skipped_missing_register],
+                          ['Skipped no name', uploadResult.skipped_missing_name],
+                          ['Rank-only rows', uploadResult.rank_only_rows],
+                        ].map(([label, value]) => (
+                          <div key={String(label)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{value ?? 0}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div style={{ color: 'var(--success)' }}>
-                    ✅ Upload successful! {uploadResult.total} students processed ({uploadResult.inserted} new, {uploadResult.modified} updated) — Type: {uploadResult.type}
+                  <div>
+                    <div style={{ color: 'var(--success)', marginBottom: '12px' }}>
+                      ✅ Upload successful! {uploadResult.total} students processed ({uploadResult.inserted} new, {uploadResult.modified} updated) — Type: {uploadResult.type}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
+                      {[
+                        ['Rows read', uploadResult.rows_read],
+                        ['Rows with reg no', uploadResult.rows_with_register_no],
+                        ['Skipped no reg', uploadResult.skipped_missing_register],
+                        ['Skipped no name', uploadResult.skipped_missing_name],
+                        ['Rank-only rows', uploadResult.rank_only_rows],
+                      ].map(([label, value]) => (
+                        <div key={String(label)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{value ?? 0}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

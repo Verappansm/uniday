@@ -30,6 +30,7 @@ const SECTIONS = ['S1', 'S2', 'S3', 'S4'];
 export default function MCPage() {
   const router = useRouter();
 
+  const [authChecked, setAuthChecked] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [seatStudents, setSeatStudents] = useState<Student[]>([]);
   const [filter, setFilter] = useState<'all' | 'checked_in' | 'absent'>('all');
@@ -42,6 +43,24 @@ export default function MCPage() {
 
   const presentCount = students.filter((s) => s.checked_in).length;
   const absentCount = students.filter((s) => !s.checked_in).length;
+
+  useEffect(() => {
+    const verifyRole = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (!res.ok || data.role !== 'mc') {
+          router.push('/login');
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    verifyRole();
+  }, [router]);
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -69,18 +88,27 @@ export default function MCPage() {
   }, [filter]);
 
   useEffect(() => {
+    if (!authChecked) return;
     fetchStudents();
     const id = setInterval(fetchStudents, 10000);
     return () => clearInterval(id);
-  }, [fetchStudents]);
+  }, [authChecked, fetchStudents]);
 
   useEffect(() => {
-    if (view === 'seating') {
+    if (authChecked && view === 'seating') {
       fetchSeating();
       const id = setInterval(fetchSeating, 10000);
       return () => clearInterval(id);
     }
-  }, [view, filter, fetchSeating]);
+  }, [authChecked, view, filter, fetchSeating]);
+
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
