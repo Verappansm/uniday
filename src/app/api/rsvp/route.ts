@@ -36,8 +36,11 @@ export async function POST(request: NextRequest) {
         qr_code: user.qr_code,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'RSVP failed' },
+      { status: 500 }
+    );
   }
 }
 
@@ -80,7 +83,10 @@ export async function GET(request: NextRequest) {
         qr_code: user.qr_code,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to load RSVP' },
+      { status: 500 }
+    );
   }
 }

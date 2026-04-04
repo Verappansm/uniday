@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     await dbConnect();
 
@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
       to: user.email,
       name: user.student_name,
       register_no: user.register_no,
-      awards: user.awards.map((a: any) => `${a.type}: ${a.details}`).join(', '),
+      awards: user.awards
+        .map((award: { type: string; details: string }) => `${award.type}: ${award.details}`)
+        .join(', '),
       rsvp_link: `${appUrl}/rsvp/${user.qr_code}`,
       tracking_pixel: `${appUrl}/api/track/open/${user.qr_code}`,
       qr_data: user.qr_code,
@@ -53,7 +55,10 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json({ success: true, sent: users.length });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Email sending failed' },
+      { status: 500 }
+    );
   }
 }
