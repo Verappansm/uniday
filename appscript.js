@@ -27,13 +27,13 @@ function doPost(e) {
         var htmlBody = generateEmailHTML(email);
         var textBody = generateEmailText(email);
 
-        MailApp.sendEmail({
-          to: email.to,
-          subject: '🎓 You\'re Invited! UniDay Award Ceremony',
-          htmlBody: htmlBody,
-          body: textBody,
-          name: 'UniDay Award Ceremony',
-        });
+  MailApp.sendEmail({
+    to: email.to,
+    subject: '🎉 Congratulations — You Are Invited to University Day',
+    htmlBody: htmlBody,
+    body: textBody,
+    name: 'University Day Award Ceremony',
+  });
 
         results.push({ to: email.to, status: 'sent' });
       } catch (err) {
@@ -81,7 +81,7 @@ function generateEmailText(email) {
   }
 
   var lines = [
-    'UniDay Award Ceremony',
+    'University Day Award Ceremony',
     '',
     'Hello ' + String(email.name || 'Student') + ',',
     '',
@@ -110,8 +110,13 @@ function generateEmailText(email) {
 }
 
 function generateEmailHTML(email) {
-  var awardName = escapeHtml(email.awards_text || (email.awards && email.awards[0] ? email.awards[0].type : 'Award'));
-  var awardDetails = escapeHtml(email.awards && email.awards[0] ? email.awards[0].details : '');
+  var awardName = escapeHtml(
+    email.awards && email.awards[0] ? email.awards[0].type : 'Award'
+  );
+
+  var awardDetails = escapeHtml(
+    email.awards && email.awards[0] ? email.awards[0].details : ''
+  );
   var rsvpLink = escapeHtml(email.rsvp_link || '');
 
   return '<!DOCTYPE html>' +
