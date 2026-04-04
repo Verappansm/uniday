@@ -170,6 +170,7 @@ function orderedClubRows(students: StudentSeatLike[]) {
 export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[] {
   const bogsStudents: T[] = [];
   const clubStudents: T[] = [];
+  const meritStudents: T[] = [];
   const attendanceStudents: T[] = [];
   const regularStudents: T[] = [];
 
@@ -184,6 +185,11 @@ export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[]
       return;
     }
 
+    if (hasKeyword(student, ['merit'])) {
+      meritStudents.push(student);
+      return;
+    }
+
     if (hasKeyword(student, ['100 percent', '100%', 'attendance'])) {
       attendanceStudents.push(student);
       return;
@@ -193,19 +199,23 @@ export function assignGroundSeats<T extends StudentSeatLike>(students: T[]): T[]
   });
 
   bogsStudents.forEach((student, index) => {
-    if (index < COLS.length) {
+    if (index < 10) {
       assignSeat(student, 'S1', 'A', COLS[index]);
     }
   });
 
-  const regularFlow = buildSeatRange('S1', 'B', ['S1', 'S2', 'S3']);
-  const regularPrimary = takeSeats(regularFlow, regularStudents.length);
-  assignSequential(regularStudents, regularPrimary);
+  const flow = buildSeatRange('S1', 'B', ['S1', 'S2', 'S3']);
+  
+  // 1. Merit Students
+  const meritPrimary = takeSeats(flow, meritStudents.length);
+  assignSequential(meritStudents, meritPrimary);
 
-  const attendancePrimary = takeSeats(regularFlow, 35);
-  const tailOverflow = [...regularFlow];
+  // 2. Attendance Students (Immediately after Merit, no fixed size block)
+  const attendancePrimary = takeSeats(flow, attendanceStudents.length);
+  assignSequential(attendanceStudents, attendancePrimary);
 
-  assignSequential(attendanceStudents, attendancePrimary, tailOverflow);
+  // 3. Regular Students (Starting from whatever is left)
+  assignSequential(regularStudents, flow);
 
   const remainingRows = [...ROWS];
   const clubGroups = orderedClubRows(clubStudents);

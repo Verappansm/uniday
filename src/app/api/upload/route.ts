@@ -47,6 +47,7 @@ interface ImportedStudent {
 
 function normalizeHeader(header: string): string {
   return header
+    .replace(/^\ufeff/, '')
     .trim()
     .toLowerCase()
     .replace(/[\s./-]+/g, '_')
@@ -71,10 +72,19 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   reg_no: 'register_no',
   reg_number: 'register_no',
   registerno: 'register_no',
+  register: 'register_no',
   registration: 'register_no',
+  registration_id: 'register_no',
+  registration_no: 'register_no',
+  registration_number: 'register_no',
+  enrollment_no: 'register_no',
+  enrollment_number: 'register_no',
   student_name: 'student_name',
+  studentname: 'student_name',
   name: 'student_name',
   student: 'student_name',
+  name_of_the_student: 'student_name',
+  name_of_student: 'student_name',
   program_code: 'program_code',
   programe_code: 'program_code',
   email: 'email',
@@ -89,20 +99,26 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   award_type: 'award_type',
   award: 'award_type',
   position: 'award_type',
+  rank_position: 'award_type',
   award_details: 'award_details',
   award_detail: 'award_details',
   award_name: 'award_details',
   club_name: 'award_details',
+  "club name": 'award_details',
+  event_name: 'award_details',
   rank: 'rank',
 };
+
+const EXCEL_FIELDS = new Set(['school', 'program', 'branch', 'batch', 'register_no', 'student_name', 'program_code', 'email', 'phone_number', 'award_type', 'award_details', 'rank']);
 
 function normalizeRow(row: RawExcelRow): ExcelRow {
   const normalized: ExcelRow = {};
 
   Object.entries(row).forEach(([rawKey, value]) => {
-    const key = HEADER_ALIASES[normalizeHeader(rawKey)];
+    const normalizedKey = normalizeHeader(rawKey);
+    const key = HEADER_ALIASES[normalizedKey] || (EXCEL_FIELDS.has(normalizedKey) ? normalizedKey : null);
     if (!key) return;
-    normalized[key] = String(value ?? '').trim();
+    normalized[key as keyof ExcelRow] = String(value ?? '').trim();
   });
 
   return normalized;

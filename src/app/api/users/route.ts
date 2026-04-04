@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
+    console.log('GET /api/users URL params:', searchParams.toString());
 
     const filter: Record<string, unknown> & {
       $or?: Array<Record<string, unknown>>;
@@ -40,24 +41,64 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limitParam = parseInt(searchParams.get('limit') || '50');
-    const limit = limitParam === 0 ? 0 : limitParam; // 0 means fetch all
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limitInput = searchParams.get('limit');
+    // If limit is '0', we fetch all
+    const limit = limitInput === '0' ? 0 : Math.max(0, parseInt(limitInput || '50'));
     const skip = limit === 0 ? 0 : (page - 1) * limit;
 
     const sortField = searchParams.get('sort');
-    const sortObj: Record<string, 1 | -1> =
-      sortField === 'upload_order' ? { upload_order: 1 } : { register_no: 1 };
+    
+    // Base pipeline
+    const pipeline: any[] = [{ $match: filter }];
 
-    const [users, total] = await Promise.all([
-      User.find(filter).skip(skip).limit(limit).sort(sortObj),
-      User.countDocuments(filter),
-    ]);
+    if (sortField === 'seating') {
+      pipeline.push(
+        {
+          $addFields: {
+            category_weight: {
+              $cond: { if: { $eq: ["$seating_category", "gallery"] }, then: 1, else: 0 }
+            }
+          }
+        },
+        {
+          $sort: {
+            category_weight: 1,
+            'seat.section': 1,
+            'seat.row': 1,
+            'seat.column': 1,
+            register_no: 1
+          }
+        }
+      );
+    } else if (sortField === 'upload_order') {
+      pipeline.push({ $sort: { upload_order: 1 } });
+    } else {
+      pipeline.push({ $sort: { register_no: 1 } });
+    }
 
-    return NextResponse.json({ users, total, page, pages: limit === 0 ? 1 : Math.ceil(total / limit) });
-  } catch (error: unknown) {
+    // Apply pagination only if limit > 0
+    if (limit > 0) {
+      pipeline.push({ $skip: skip }, { $limit: limit });
+    }
+
+    console.log('Executing aggregate with pipeline length:', pipeline.length);
+    const users = await User.aggregate(pipeline);
+    const total = await User.countDocuments(filter);
+
+    return NextResponse.json({ 
+      users, 
+      total, 
+      page, 
+      pages: limit === 0 ? 1 : Math.ceil(total / limit) 
+    });
+  } catch (error: any) {
+    console.error('API Error in /api/users:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load users' },
+      { 
+        error: error instanceof Error ? error.message : 'Internal Server Error',
+        stack: error?.stack 
+      },
       { status: 500 }
     );
   }
