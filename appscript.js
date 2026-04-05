@@ -123,25 +123,44 @@ function generateEmailHTML(email) {
     '<html>' +
     '<head>' +
     '<meta charset="UTF-8">' +
+    '<meta name="color-scheme" content="light dark">' +
     '<title>University Day Invitation</title>' +
+    '<style>' +
+    '@media (prefers-color-scheme: dark) {' +
+    'body { background-color: #1a1a1a !important; }' +
+    '.email-outer { background-color: #1a1a1a !important; }' +
+    '.email-container { background: #2d2d2d !important; }' +
+    '.email-header { color: #e0e0e0 !important; }' +
+    '.email-header-subtitle { color: #a0a0a0 !important; }' +
+    '.email-text { color: #e0e0e0 !important; }' +
+    '.email-text-secondary { color: #b0b0b0 !important; }' +
+    '.email-text-muted { color: #555555 !important; }' +
+    '.event-details { color: #e0e0e0 !important; }' +
+    '.event-detail-text { color: #c0c0c0 !important; }' +
+    '.email-link { color: #8a8a8a !important; }' +
+    '.email-button { background-color: #505050 !important; border: 1px solid #707070 !important; }' +
+    '.email-footer { color: #707070 !important; }' +
+    '.qr-container { border-color: #5a5a5a !important; background: #3a3a3a !important; filter: grayscale(100%); }' +
+    '}' +
+    '</style>' +
     '</head>' +
-    '<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#1a1a1a;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a; padding:20px;">' +
+    '<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f5f5f5;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" class="email-outer" style="background-color:#f5f5f5; padding:20px;">' +
     '<tr>' +
     '<td align="center">' +
-    '<table width="600" cellpadding="0" cellspacing="0" style="background:#2d2d2d; border-radius:8px; padding:30px;">' +
+    '<table width="600" cellpadding="0" cellspacing="0" class="email-container" style="background:#ffffff; border-radius:8px; padding:30px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">' +
 
     // Header
     '<tr>' +
     '<td align="center" style="padding-bottom:20px;">' +
-    '<h2 style="margin:0; color:#e0e0e0;">VIT Chennai</h2>' +
-    '<p style="margin:5px 0 0; color:#a0a0a0;">University Day Invitation</p>' +
+    '<h2 class="email-header" style="margin:0; color:#2c3e50;">VIT Chennai</h2>' +
+    '<p class="email-header-subtitle" style="margin:5px 0 0; color:#7f8c8d;">University Day Invitation</p>' +
     '</td>' +
     '</tr>' +
 
     // Greeting
     '<tr>' +
-    '<td style="color:#e0e0e0; font-size:16px;">' +
+    '<td class="email-text" style="color:#2c3e50; font-size:16px;">' +
     'Dear ' + escapeHtml(email.name || 'Student') + ',' +
     '<br><br>' +
     'Warm greetings from VIT Chennai!' +
@@ -152,15 +171,15 @@ function generateEmailHTML(email) {
 
     // Award Section
     '<tr>' +
-    '<td style="padding:15px 0; color:#e0e0e0; font-size:16px;">' +
+    '<td class="email-text" style="padding:15px 0; color:#2c3e50; font-size:16px;">' +
     'You have been awarded the <strong>' + awardName + '</strong>' +
-    (awardDetails ? ' <span style="color:#b0b0b0;">(' + awardDetails + ')</span>' : '') + '.' +
+    (awardDetails ? ' <span class="email-text-muted" style="color:#555555;">(' + awardDetails + ')</span>' : '') + '.' +
     '</td>' +
     '</tr>' +
 
     // Note
     '<tr>' +
-    '<td style="color:#b0b0b0; font-size:15px;">' +
+    '<td class="email-text-secondary" style="color:#555555; font-size:15px;">' +
     'Your accomplishment is highly commendable, and we take great pride in recognizing your success.' +
     '</td>' +
     '</tr>' +
@@ -168,39 +187,39 @@ function generateEmailHTML(email) {
     // Event Details
     '<tr>' +
     '<td style="padding-top:20px;">' +
-    '<h3 style="margin-bottom:10px; color:#e0e0e0;">Event Details</h3>' +
-    '<p style="margin:5px 0; color:#c0c0c0;"><strong>Date:</strong> April 7th (Tuesday)</p>' +
-    '<p style="margin:5px 0; color:#c0c0c0;"><strong>Time:</strong> 9:00 AM – 1:30 PM</p>' +
-    '<p style="margin:5px 0; color:#c0c0c0;"><strong>Venue:</strong> MG Auditorium</p>' +
+    '<h3 class="event-details" style="margin-bottom:10px; color:#2c3e50;">Event Details</h3>' +
+    '<p class="event-detail-text" style="margin:5px 0; color:#34495e;"><strong>Date:</strong> April 7th (Tuesday)</p>' +
+    '<p class="event-detail-text" style="margin:5px 0; color:#34495e;"><strong>Time:</strong> 9:00 AM – 1:30 PM</p>' +
+    '<p class="event-detail-text" style="margin:5px 0; color:#34495e;"><strong>Venue:</strong> MG Auditorium</p>' +
     '</td>' +
     '</tr>' +
 
     // QR Code
     '<tr>' +
     '<td style="padding-top:20px; text-align:center;">' +
-    (email.qr_data ? '<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(email.qr_data) + '" width="220" height="220" style="border:2px solid #5a5a5a; border-radius:8px; padding:10px; background:#3a3a3a; filter:grayscale(100%);" alt="QR Code" />' : '') +
+    (email.qr_data ? '<img class="qr-container" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(email.qr_data) + '" width="220" height="220" style="border:2px solid #bdc3c7; border-radius:8px; padding:10px; background:#ffffff;" alt="QR Code" />' : '') +
     '</td>' +
     '</tr>' +
 
     // Instructions
     '<tr>' +
-    '<td style="padding-top:15px; color:#b0b0b0; font-size:15px;">' +
+    '<td class="email-text-secondary" style="padding-top:15px; color:#555555; font-size:15px;">' +
     'You are requested to assemble sharp at <strong>9:00 AM</strong> at the MG Auditorium.' +
     '<br><br>' +
-    'Kindly <strong><a href="' + rsvpLink + '" style="color:#8a8a8a; text-decoration:none;">RSVP to confirm your attendance</a></strong>. This is mandatory, as the QR code provided will be used for entry on the day of the event.' +
+    'Kindly <strong><a class="email-link" href="' + rsvpLink + '" style="color:#0066cc; text-decoration:none;">RSVP to confirm your attendance</a></strong>. This is mandatory, as the QR code provided will be used for entry on the day of the event.' +
     '</td>' +
     '</tr>' +
 
     // RSVP Button
     '<tr>' +
     '<td style="padding-top:20px; text-align:center;">' +
-    '<a href="' + rsvpLink + '" style="display:inline-block; background-color:#505050; color:#ffffff; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; border:1px solid #707070;">RSVP Now</a>' +
+    '<a class="email-button" href="' + rsvpLink + '" style="display:inline-block; background-color:#0066cc; color:#ffffff; padding:12px 30px; text-decoration:none; border-radius:5px; font-weight:bold; border:none;">RSVP Now</a>' +
     '</td>' +
     '</tr>' +
 
     // Footer
     '<tr>' +
-    '<td style="padding-top:30px; color:#707070; font-size:14px;">' +
+    '<td class="email-footer" style="padding-top:30px; color:#7f8c8d; font-size:14px;">' +
     'We look forward to celebrating your achievement.' +
     '<br><br>' +
     'Warm regards,<br>' +
