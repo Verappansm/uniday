@@ -950,6 +950,24 @@ body {
   }
 }
 
+/* Login page mobile optimization */
+@media (max-width: 768px) {
+  /* Hide cluttered silk background on mobile */
+  [style*="position: 'fixed'"][style*="z-index: 0"] {
+    display: none !important;
+  }
+
+  /* Clean black background for mobile login */
+  [style*="minHeight: '100vh'"][style*="position: 'relative'"] {
+    background: #000000 !important;
+  }
+
+  /* Simplify overlay to pure black */
+  [style*="radial-gradient(ellipse at center"] {
+    background: #000000 !important;
+  }
+}
+
 /* RSVP page responsive */
 @media (max-width: 768px) {
   /* QR code sizing */
