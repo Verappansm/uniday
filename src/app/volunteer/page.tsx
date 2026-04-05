@@ -408,6 +408,9 @@ export default function VolunteerPage() {
   const [scanning, setScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScannerInstance | null>(null);
+  const isProcessingScanRef = useRef(false);
+  const lastScannedValueRef = useRef('');
+  const lastScannedAtRef = useRef(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -503,8 +506,23 @@ export default function VolunteerPage() {
             : result.data || result.rawValue || '';
 
         if (value) {
-          stopScanner();
-          void handleCheckin(value);
+          const now = Date.now();
+          const trimmedValue = value.trim();
+          const isRapidDuplicate =
+            trimmedValue === lastScannedValueRef.current &&
+            now - lastScannedAtRef.current < 2000;
+
+          if (isProcessingScanRef.current || isRapidDuplicate) {
+            return;
+          }
+
+          isProcessingScanRef.current = true;
+          lastScannedValueRef.current = trimmedValue;
+          lastScannedAtRef.current = now;
+
+          void handleCheckin(trimmedValue).finally(() => {
+            isProcessingScanRef.current = false;
+          });
         }
       }, {
         preferredCamera: 'environment',
