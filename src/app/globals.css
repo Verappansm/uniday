@@ -369,12 +369,665 @@ body {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  body {
+    height: 100%;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  /* Safe area for notched devices */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
   .stat-card .stat-value {
     font-size: 1.8rem;
   }
+
+  .stat-card .stat-label {
+    font-size: 0.75rem;
+  }
+
   .seat-cell {
     width: 28px;
     height: 28px;
     font-size: 0.6rem;
+  }
+
+  .data-table {
+    font-size: 0.85rem;
+  }
+
+  .data-table th {
+    padding: 10px 8px;
+    font-size: 0.65rem;
+  }
+
+  .data-table td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    width: 100%;
+  }
+
+  .input-field {
+    min-height: 44px;
+    font-size: 16px;
+    padding: 12px 16px;
+  }
+
+  .badge {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .glass-card {
+    border-radius: 12px;
+  }
+}
+
+/* Small phones - up to 480px */
+@media (max-width: 480px) {
+  :root {
+    font-size: 13px;
+  }
+
+  body {
+    font-size: 13px;
+    overflow-y: auto;
+  }
+
+  .glass-card {
+    border-radius: 10px;
+    padding: clamp(14px, 3vw, 18px);
+  }
+
+  .stat-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+    margin-bottom: 2px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 0.65rem;
+  }
+
+  h1 {
+    font-size: clamp(1.2rem, 5vw, 1.5rem) !important;
+  }
+
+  h2 {
+    font-size: clamp(1rem, 4vw, 1.2rem) !important;
+  }
+
+  h3 {
+    font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    width: 100%;
+    min-height: 44px;
+    border-radius: 8px;
+  }
+
+  .input-field {
+    min-height: 44px;
+    font-size: 16px;
+    padding: 12px 12px;
+    border-radius: 8px;
+  }
+
+  .seat-cell {
+    width: 24px;
+    height: 24px;
+    font-size: 0.55rem;
+  }
+
+  .seat-cell:hover {
+    transform: scale(1.15);
+  }
+
+  .data-table {
+    font-size: 0.75rem;
+  }
+
+  .data-table th {
+    padding: 8px 4px;
+    font-size: 0.6rem;
+  }
+
+  .data-table td {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    padding: 3px 6px;
+    font-size: 0.6rem;
+  }
+
+  /* Override max-width constraints for mobile */
+  [style*="maxWidth"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Improve spacing for touch targets */
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-border-radius: 0;
+    border-radius: 0;
+  }
+}
+
+/* Tablet optimization (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .stat-card {
+    padding: 18px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 2rem;
+  }
+
+  .seat-cell {
+    width: 32px;
+    height: 32px;
+    font-size: 0.65rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    padding: 11px 18px;
+    font-size: 0.92rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger,
+  .glass-card,
+  .seat-cell,
+  button,
+  a[role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-success:active,
+  .btn-danger:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  .seat-cell:active {
+    transform: scale(1.2);
+  }
+
+  /* Disable tap highlight */
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1024px) {
+  .stat-card .stat-value {
+    font-size: 2.5rem;
+  }
+
+  .seat-cell {
+    width: 36px;
+    height: 36px;
+    font-size: 0.7rem;
+  }
+
+  .seat-cell:hover {
+    transform: scale(1.2);
+  }
+}
+
+/* Ultra-wide screens */
+@media (min-width: 1440px) {
+  .glass-card {
+    border-radius: 16px;
+  }
+
+  .stat-card {
+    border-radius: 16px;
+  }
+}
+
+/* Admin page responsive styles */
+@media (max-width: 768px) {
+  /* Collapse sidebar on tablet and hide its text */
+  aside {
+    width: 0 !important;
+    padding: 0 !important;
+    border-right: none !important;
+    position: static !important;
+  }
+
+  aside button {
+    display: none !important;
+  }
+
+  /* Main content takes full width */
+  main {
+    margin-left: 0 !important;
+    padding: 16px !important;
+  }
+
+  /* Make 2-column grids single column */
+  [style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Make multi-column grids responsive */
+  [style*="gridTemplateColumns: 'repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="repeat(auto-fit"] {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  }
+
+  [style*="repeat(auto-fill"] {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+  }
+
+  /* Seating section cards */
+  [style*="minmax(400px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce padding in main content */
+  main h2 {
+    font-size: 1.3rem !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Adjust table for mobile */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table tr {
+    margin-bottom: 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .data-table td {
+    padding: 8px 0;
+    text-align: right;
+    position: relative;
+    padding-left: 50%;
+  }
+
+  .data-table td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  /* Tooltip positioning for mobile */
+  [style*="position: 'fixed'"][style*="tooltipPos"] {
+    position: fixed !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 20px !important;
+    margin: 0 20px !important;
+    min-width: auto !important;
+    width: auto !important;
+    max-width: calc(100% - 40px) !important;
+  }
+
+  /* Stats cards */
+  .stat-card {
+    padding: 12px !important;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.4rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Main content padding */
+  main {
+    padding: 12px !important;
+  }
+
+  main h2 {
+    font-size: 1.2rem !important;
+    margin-bottom: 12px !important;
+  }
+
+  main h3 {
+    font-size: 1rem !important;
+  }
+
+  /* Make nested flex layouts stack vertically */
+  [style*="display: 'flex'"][style*="gap: '16px'"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Stat cards in dashboard */
+  [style*="flex: 1"] {
+    flex: 1 !important;
+    min-width: 100%;
+  }
+
+  /* Stats value sizing */
+  .stat-value {
+    font-size: 1.3rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.65rem !important;
+  }
+
+  /* Upload section */
+  .btn-primary,
+  .btn-secondary,
+  .btn-success,
+  .btn-danger {
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Students list */
+  .data-table th {
+    font-size: 0.55rem !important;
+  }
+
+  .data-table td {
+    font-size: 0.7rem !important;
+  }
+
+  /* Card paddings */
+  .glass-card {
+    padding: 12px !important;
+  }
+
+  /* Reduce gaps in grids */
+  [style*="gap: '24px'"],
+  [style*="gap: '32px'"] {
+    gap: 12px !important;
+  }
+
+  [style*="gap: '16px'"] {
+    gap: 8px !important;
+  }
+}
+
+/* MC page responsive styles */
+@media (max-width: 768px) {
+  /* Hide side panel on tablet */
+  [style*="width: selectedSeat ? '300px'"] {
+    width: 0 !important;
+    padding: 0 !important;
+    border-left: none !important;
+  }
+
+  /* Full-width seating grid */
+  [style*="flex: 1"] {
+    width: 100% !important;
+  }
+
+  /* Reduce seat cell size */
+  [style*="width: '36px'"] {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* Search input optimization */
+  input[type="text"] {
+    min-height: 44px !important;
+  }
+
+  /* View toggle buttons */
+  [role="button"][style*="padding: '10px 16px'"] {
+    padding: 8px 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* MC details panel becomes modal overlay on mobile */
+  [style*="width: selectedSeat ? '300px'"] {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    z-index: 100 !important;
+    border-left: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Even smaller seat cells on phone */
+  [style*="width: '36px'"] {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 0.5rem !important;
+  }
+
+  /* Stack layout vertically */
+  [style*="display: 'flex'"][style*="gap: '24px'"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Search box full width */
+  input[type="text"][placeholder*="search"] {
+    width: 100% !important;
+  }
+
+  /* Mode toggle buttons stack */
+  [style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Volunteer page responsive */
+@media (max-width: 768px) {
+  /* QR scanner adjustments */
+  [style*="minHeight: '100vh'"] {
+    min-height: 100vh;
+    padding: 12px !important;
+  }
+
+  /* Cards on volunteer page */
+  [style*="maxWidth: '640px'"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Shell container */
+  [style*="width: '100%'"][style*="maxWidth: '640px'"] {
+    gap: 12px !important;
+  }
+
+  /* Student cards */
+  .glass-card[style*="padding: '20px"] {
+    padding: 14px !important;
+  }
+
+  /* Details grid on volunteer */
+  [style*="display: 'grid'"][style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Volunteer page header */
+  [style*="fontSize: '1.95rem'"] {
+    font-size: 1.4rem !important;
+  }
+
+  [style*="fontSize: '0.92rem'"] {
+    font-size: 0.8rem !important;
+  }
+
+  /* Mode buttons stack */
+  [style*="gridTemplateColumns: 'repeat(2"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* QR code section */
+  [style*="minHeight: '300px'"] {
+    min-height: 250px !important;
+  }
+
+  /* Input optimization */
+  [style*="placeholder"] {
+    font-size: 16px !important;
+  }
+}
+
+/* RSVP page responsive */
+@media (max-width: 768px) {
+  /* QR code sizing */
+  svg[width="200"] {
+    width: 160px !important;
+    height: 160px !important;
+  }
+
+  /* Seat map visualization */
+  [style*="width: isMySpot ? '20px'"] {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  [style*="width: isMySpot ? '20px'"] ~ [style*="width:"] {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* Padding adjustments */
+  .glass-card {
+    padding: 24px !important;
+  }
+
+  /* Button sizing */
+  button[style*="flex: 1"] {
+    padding: 14px 12px !important;
+    font-size: 0.95rem !important;
+  }
+
+  textarea {
+    min-height: 80px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* RSVP page smaller QR code */
+  svg[width="200"] {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  /* Card padding */
+  .glass-card {
+    padding: 16px !important;
+  }
+
+  /* Large text sizing */
+  [style*="fontSize: '2.5rem'"] {
+    font-size: 1.8rem !important;
+  }
+
+  [style*="fontSize: '1.6rem'"] {
+    font-size: 1.3rem !important;
+  }
+
+  [style*="fontSize: '1.4rem'"] {
+    font-size: 1.1rem !important;
+  }
+
+  [style*="fontSize: '1.1rem'"] {
+    font-size: 0.95rem !important;
+  }
+
+  /* RSVP buttons */
+  button[style*="flex: 1"] {
+    padding: 12px 10px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Gap reduction */
+  [style*="gap: '12px'"] {
+    gap: 8px !important;
+  }
+
+  /* Text area */
+  textarea {
+    min-height: 70px !important;
+    font-size: 16px !important;
   }
 }
