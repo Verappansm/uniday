@@ -643,7 +643,7 @@ export default function AdminPage() {
                   onClick={() => handleUpload('clubs')}
                   className="btn-primary"
                   disabled={uploading}
-                  style={{ width: '100%', background: 'var(--info)', borderColor: 'var(--info)' }}
+                  style={{ width: '100%' }}
                 >
                   {uploading ? 'Uploading...' : 'Upload Clubs Excel'}
                 </button>
